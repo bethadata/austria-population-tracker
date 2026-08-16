@@ -1,0 +1,134 @@
+{
+  "app": {
+    "title": "Österreich Bevölkerung",
+    "subtitle": "Regionale Bevölkerungsentwicklung",
+    "loading": "Daten werden geladen …",
+    "error": "Daten konnten nicht geladen werden"
+  },
+  "nav": {
+    "map": "Karte",
+    "list": "Liste",
+    "about": "Über",
+    "language": "Sprache",
+    "theme": "Darstellung",
+    "theme_light": "Hell",
+    "theme_dark": "Dunkel"
+  },
+  "levels": {
+    "country": "Österreich",
+    "nuts1": "Bundesländergruppen (NUTS 1)",
+    "nuts2": "Bundesländer",
+    "nuts3": "NUTS-3-Regionen",
+    "district": "Bezirke",
+    "municipality": "Gemeinden"
+  },
+  "levels_short": {
+    "country": "Staat",
+    "nuts1": "NUTS 1",
+    "nuts2": "Bundesland",
+    "nuts3": "NUTS 3",
+    "district": "Bezirk",
+    "municipality": "Gemeinde"
+  },
+  "classes": {
+    "total": "Gesamt",
+    "austrian": "Österreichische Staatsangehörige",
+    "foreign": "Nicht-österreichische Staatsangehörige",
+    "eu_efta_uk": "EU / EFTA / UK",
+    "third_country": "Drittstaaten"
+  },
+  "metric": {
+    "label": "Kennzahl",
+    "cagr": "Jährliche Wachstumsrate",
+    "absolute_change": "Absolute Veränderung",
+    "relative_change": "Relative Veränderung",
+    "cagr_unit": "% pro Jahr",
+    "window": "Zeitraum",
+    "window_years": "{n} Jahre",
+    "window_since": "seit {year}"
+  },
+  "chart": {
+    "view": "Ansicht",
+    "absolute": "Absolutwerte",
+    "change_relative": "Veränderung (%)",
+    "change_absolute": "Veränderung (Personen)",
+    "indexed": "Indexiert (Basis = 100)",
+    "frequency": "Frequenz",
+    "annual": "Jährlich",
+    "quarterly": "Quartalsweise",
+    "quarterly_hint": "Quartalsdaten liegen nur auf Bundeslandebene vor.",
+    "citizenship": "Nach Staatsangehörigkeit aufschlüsseln",
+    "provisional": "Vorläufig",
+    "provisional_note": "Die letzten Quartale sind vorläufige Ergebnisse und wurden nach einer abweichenden Methodik (Mindestaufenthaltsdauer von 90 Tagen) berechnet.",
+    "population": "Bevölkerung",
+    "no_data": "Keine Daten verfügbar"
+  },
+  "map": {
+    "title": "Karte",
+    "level": "Ebene",
+    "legend": "Jährliche Veränderung",
+    "legend_unit": "% pro Jahr",
+    "shrinking": "Rückgang",
+    "growing": "Wachstum",
+    "reset": "Ansicht zurücksetzen",
+    "hint": "Region anklicken, um die Zeitreihe unten anzuzeigen.",
+    "selected": "Ausgewählt"
+  },
+  "list": {
+    "title": "Regionen",
+    "search": "Region suchen …",
+    "level": "Ebene",
+    "sort": "Sortierung",
+    "fastest_growing": "Am stärksten wachsend",
+    "fastest_shrinking": "Am stärksten schrumpfend",
+    "largest": "Größte",
+    "name": "Name",
+    "code": "Code",
+    "population": "Bevölkerung {date}",
+    "change": "Veränderung",
+    "min_population": "Mindestbevölkerung",
+    "min_population_hint": "Filtert sehr kleine Gemeinden heraus, deren Wachstumsraten von wenigen Personen bestimmt werden.",
+    "no_results": "Keine Regionen gefunden",
+    "showing": "{n} von {total} Regionen"
+  },
+  "about_page": {
+    "about": {
+      "title": "Über dieses Projekt",
+      "intro_1": "Der Austria Population Tracker visualisiert die Bevölkerungsentwicklung Österreichs von 2002 bis heute – auf Ebene der Bundesländer, der politischen Bezirke und der Gemeinden. Auf der Karte lassen sich Regionen auswählen, um deren Zeitreihe im Detail zu betrachten; die Einfärbung zeigt, wie schnell eine Region wächst oder schrumpft.",
+      "intro_2": "Sämtliche Daten stammen von Statistik Austria und werden regelmäßig automatisiert aktualisiert. Die Seite läuft vollständig im Browser – es werden keine Daten an einen Server übermittelt.",
+      "github_text": "Der gesamte Quellcode inklusive der Datenaufbereitung ist auf {link} verfügbar.",
+      "github_link": "GitHub",
+      "tracker_text": "Ein verwandtes Projekt zur österreichischen Stromversorgung finden Sie unter {link}.",
+      "tracker_link": "Austria Power Sim"
+    },
+    "data": {
+      "title": "Datenquellen",
+      "source_text": "Grundlage sind zwei Zeitreihen von Statistik Austria: die Bevölkerung zu Jahresbeginn nach administrativen Gebietseinheiten (seit 2002) sowie die Bevölkerung zu Quartalsbeginn nach Bundesland und Staatsangehörigkeit (seit 2010). Die Geometrien der Verwaltungsgrenzen stammen ebenfalls von Statistik Austria.",
+      "licence_text": "Die Daten stehen unter der Lizenz {link} zur Verfügung.",
+      "licence_link": "Creative Commons Namensnennung 4.0 International",
+      "validation_text": "Jede Aktualisierung wird automatisch geprüft: Die Summen aller Ebenen müssen übereinstimmen, und die Bezirkswerte werden zusätzlich gegen die OGD-Schnittstelle von Statistik Austria abgeglichen.",
+      "vintage": "Datenstand",
+      "generated": "Zuletzt aktualisiert"
+    },
+    "privacy": {
+      "title": "Datenschutz",
+      "text": "Diese Seite wird über GitHub Pages bereitgestellt und verwendet keine Cookies, kein Tracking und keine Analysewerkzeuge. GitHub kann als Hoster Zugriffsdaten erheben – siehe {link1} und {link2}.",
+      "link1": "Datenerhebung durch GitHub Pages",
+      "link2": "GitHub Datenschutzerklärung"
+    },
+    "disclaimer": {
+      "title": "Haftungsausschluss",
+      "text_1": "Diese Seite ist ein privates Projekt und steht in keiner Verbindung zu Statistik Austria oder einer anderen Behörde.",
+      "text_2": "Die Daten werden nach bestem Wissen aufbereitet, jedoch ohne Gewähr für Richtigkeit, Vollständigkeit oder Aktualität. Für verbindliche Auskünfte konsultieren Sie bitte die Originalquellen von Statistik Austria.",
+      "text_3": "Die jüngsten Quartalswerte sind vorläufig und können nachträglich revidiert werden."
+    },
+    "ai": {
+      "title": "Einsatz von KI",
+      "text": "Teile des Quellcodes dieser Seite wurden mit Unterstützung von KI-Werkzeugen erstellt. Die Datenaufbereitung wird automatisiert gegen unabhängige Quellen validiert."
+    }
+  },
+  "footer": {
+    "source": "Quelle: Statistik Austria",
+    "data_as_of": "Datenstand {date}"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "app": {
+    "title": "Austria Population",
+    "subtitle": "Regional population change",
+    "loading": "Loading data …",
+    "error": "Could not load data"
+  },
+  "nav": {
+    "map": "Map",
+    "list": "List",
+    "about": "About",
+    "language": "Language",
+    "theme": "Appearance",
+    "theme_light": "Light",
+    "theme_dark": "Dark"
+  },
+  "levels": {
+    "country": "Austria",
+    "nuts1": "Groups of Bundesländer (NUTS 1)",
+    "nuts2": "Bundesländer",
+    "nuts3": "NUTS 3 regions",
+    "district": "Districts",
+    "municipality": "Municipalities"
+  },
+  "levels_short": {
+    "country": "Country",
+    "nuts1": "NUTS 1",
+    "nuts2": "Bundesland",
+    "nuts3": "NUTS 3",
+    "district": "District",
+    "municipality": "Municipality"
+  },
+  "classes": {
+    "total": "Total",
+    "austrian": "Austrian citizens",
+    "foreign": "Non-Austrian citizens",
+    "eu_efta_uk": "EU / EFTA / UK",
+    "third_country": "Third countries"
+  },
+  "metric": {
+    "label": "Metric",
+    "cagr": "Annual growth rate",
+    "absolute_change": "Absolute change",
+    "relative_change": "Relative change",
+    "cagr_unit": "% per year",
+    "window": "Period",
+    "window_years": "{n} years",
+    "window_since": "since {year}"
+  },
+  "chart": {
+    "view": "View",
+    "absolute": "Absolute values",
+    "change_relative": "Change (%)",
+    "change_absolute": "Change (people)",
+    "indexed": "Indexed (base = 100)",
+    "frequency": "Frequency",
+    "annual": "Annual",
+    "quarterly": "Quarterly",
+    "quarterly_hint": "Quarterly data is only available at Bundesland level.",
+    "citizenship": "Break down by citizenship",
+    "provisional": "Provisional",
+    "provisional_note": "The most recent quarters are provisional results, calculated under a different methodology (a 90-day minimum residence requirement).",
+    "population": "Population",
+    "no_data": "No data available"
+  },
+  "map": {
+    "title": "Map",
+    "level": "Level",
+    "legend": "Annual change",
+    "legend_unit": "% per year",
+    "shrinking": "Shrinking",
+    "growing": "Growing",
+    "reset": "Reset view",
+    "hint": "Click a region to show its time series below.",
+    "selected": "Selected"
+  },
+  "list": {
+    "title": "Regions",
+    "search": "Search for a region …",
+    "level": "Level",
+    "sort": "Sort by",
+    "fastest_growing": "Fastest growing",
+    "fastest_shrinking": "Fastest shrinking",
+    "largest": "Largest",
+    "name": "Name",
+    "code": "Code",
+    "population": "Population {date}",
+    "change": "Change",
+    "min_population": "Minimum population",
+    "min_population_hint": "Filters out very small municipalities whose growth rates are driven by a handful of people.",
+    "no_results": "No regions found",
+    "showing": "{n} of {total} regions"
+  },
+  "about_page": {
+    "about": {
+      "title": "About this project",
+      "intro_1": "The Austria Population Tracker visualises how Austria's population has changed since 2002 — across Bundesländer, political districts and municipalities. Select a region on the map to inspect its time series in detail; the colouring shows how quickly a region is growing or shrinking.",
+      "intro_2": "All data comes from Statistik Austria and is refreshed automatically. The site runs entirely in your browser — no data is sent to any server.",
+      "github_text": "The full source code, including the data pipeline, is available on {link}.",
+      "github_link": "GitHub",
+      "tracker_text": "For a related project on the Austrian power system, see {link}.",
+      "tracker_link": "Austria Power Sim"
+    },
+    "data": {
+      "title": "Data sources",
+      "source_text": "Two Statistik Austria time series underpin this site: population at the beginning of each year by administrative unit (since 2002), and population at the beginning of each quarter by Bundesland and citizenship (since 2010). Administrative boundary geometries also come from Statistik Austria.",
+      "licence_text": "The data is published under the {link} licence.",
+      "licence_link": "Creative Commons Attribution 4.0 International",
+      "validation_text": "Every update is checked automatically: totals must reconcile across all levels, and district figures are additionally cross-checked against Statistik Austria's OGD API.",
+      "vintage": "Data vintage",
+      "generated": "Last updated"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "text": "This site is served through GitHub Pages and uses no cookies, no tracking and no analytics. As the host, GitHub may collect access data — see {link1} and {link2}.",
+      "link1": "GitHub Pages data collection",
+      "link2": "GitHub Privacy Statement"
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "text_1": "This site is a private project and is not affiliated with Statistik Austria or any other public authority.",
+      "text_2": "The data is prepared to the best of our knowledge, but without warranty as to accuracy, completeness or timeliness. For authoritative figures, please consult the original Statistik Austria sources.",
+      "text_3": "The most recent quarterly figures are provisional and may be revised."
+    },
+    "ai": {
+      "title": "Use of AI",
+      "text": "Parts of this site's source code were written with the help of AI tools. The data pipeline is validated automatically against independent sources."
+    }
+  },
+  "footer": {
+    "source": "Source: Statistik Austria",
+    "data_as_of": "Data as of {date}"
+  }
+}

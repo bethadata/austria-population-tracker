@@ -1,0 +1,7 @@
+node_modules/
+dist/
+raw_cache/
+*.local
+.DS_Store
+.vscode/
+__pycache__/
