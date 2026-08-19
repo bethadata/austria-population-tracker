@@ -61,7 +61,8 @@
     "provisional": "Provisional",
     "provisional_note": "The most recent quarters are provisional results, calculated under a different methodology (a 90-day minimum residence requirement).",
     "population": "Population",
-    "no_data": "No data available"
+    "no_data": "No data available",
+    "citizenship_short": "By citizenship"
   },
   "detail": {
     "map_indicator": "Map indicator",

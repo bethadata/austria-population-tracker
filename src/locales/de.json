@@ -61,7 +61,8 @@
     "provisional": "Vorläufig",
     "provisional_note": "Die letzten Quartale sind vorläufige Ergebnisse und wurden nach einer abweichenden Methodik (Mindestaufenthaltsdauer von 90 Tagen) berechnet.",
     "population": "Bevölkerung",
-    "no_data": "Keine Daten verfügbar"
+    "no_data": "Keine Daten verfügbar",
+    "citizenship_short": "Staatsangehörigkeit"
   },
   "detail": {
     "map_indicator": "Kennzahl der Karte",

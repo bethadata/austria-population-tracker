@@ -13,7 +13,7 @@ fast each region is growing or shrinking.
 - **Interactive map** — Bundesländer (9) and politische Bezirke incl. Vienna's 23 Gemeindebezirke (116), click to select, zoom floored at the whole-country view
 - **Change-rate colouring** — diverging scale centred on zero, switchable between annualised growth (CAGR), relative and absolute change over a 1 / 5 / 10 / 24-year window
 - **Time series** — absolute values, relative change, absolute change and indexed views, with an optional citizenship breakdown; shown beside the map rather than below it, so both fit one screen
-- **Region detail** — the map's own indicator as a single headline figure, plus the last ten years with absolute and relative change
+- **Region detail** — the map's own indicator as a single headline figure, plus a ten-year table with years across the columns and population, absolute and relative change down the rows
 - **Quarterly detail** — at Bundesland level, with a 5-way citizenship split and provisional periods clearly marked
 - **Searchable, sortable list** — all 2 256 regions down to municipality level, ranked by fastest growing / shrinking / largest
 - **Bilingual** — German and English, with a persisted preference

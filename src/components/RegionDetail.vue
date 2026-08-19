@@ -35,20 +35,26 @@ const heroText = computed(() =>
 
 const latest = computed(() => series.value[series.value.length - 1] ?? null)
 
-/**
- * The last ten years, newest first, each with its change against the preceding
- * year. Needs eleven data points to produce ten rows; the series carries 25.
- */
-const rows = computed(() => {
-  const values = series.value
-  const out: {
-    year: string
-    population: number | null
-    deltaAbs: number | null
-    deltaRel: number | null
-  }[] = []
+interface YearColumn {
+  year: string
+  population: number | null
+  deltaAbs: number | null
+  deltaRel: number | null
+}
 
-  for (let i = values.length - 1; i >= 0 && out.length < YEARS; i -= 1) {
+/**
+ * The last ten years, oldest first, each with its change against the preceding
+ * year. Needs eleven data points to fill ten columns; the series carries 25.
+ *
+ * Oldest first because the years run along the horizontal axis here, and time
+ * reading left to right is the only orientation that does not fight the reader.
+ */
+const columns = computed<YearColumn[]>(() => {
+  const values = series.value
+  const first = Math.max(values.length - YEARS, 0)
+  const out: YearColumn[] = []
+
+  for (let i = first; i < values.length; i += 1) {
     const current = values[i]
     const previous = i > 0 ? values[i - 1] : null
     out.push({
@@ -63,14 +69,32 @@ const rows = computed(() => {
   }
   return out
 })
+
+/** Row definitions, so the transposed body stays declarative. */
+const measures = computed(() => [
+  {
+    key: 'population',
+    label: t('detail.population'),
+    value: (c: YearColumn) => formatNumber(c.population, locale.value),
+  },
+  {
+    key: 'abs',
+    label: t('detail.change_abs'),
+    value: (c: YearColumn) => formatSigned(c.deltaAbs, locale.value),
+  },
+  {
+    key: 'rel',
+    label: t('detail.change_rel'),
+    value: (c: YearColumn) => formatPercent(c.deltaRel, locale.value),
+  },
+])
 </script>
 
 <template>
-  <v-card flat border class="d-flex flex-column detail-card">
-    <!-- Header and hero kept tight: every pixel here is a table row lost.
-         The hero names the metric the map is coloured by, so the panel and the
-         map can never appear to describe different things. -->
-    <div class="px-4 pt-3">
+  <v-card flat border>
+    <!-- Wide header: identity on the left, the map's own indicator beside it, so
+         the panel and the map can never appear to describe different things. -->
+    <div class="d-flex flex-wrap align-center ga-8 px-4 pt-3 pb-2">
       <div class="d-flex align-baseline ga-2 flex-wrap">
         <span class="region-name text-h6">{{ displayName || t('detail.no_selection') }}</span>
         <span v-if="region" class="text-caption text-medium-emphasis">
@@ -78,87 +102,103 @@ const rows = computed(() => {
         </span>
       </div>
 
-      <div class="d-flex align-end ga-6 flex-wrap mt-1">
-        <div>
-          <div class="text-caption text-medium-emphasis">{{ t('detail.map_indicator') }}</div>
-          <div class="hero">{{ heroText }}</div>
+      <div>
+        <div class="text-caption text-medium-emphasis">
+          {{ t('detail.map_indicator') }} · {{ fullLabel }}
         </div>
-        <div class="pb-1">
-          <div class="text-caption text-medium-emphasis">
-            {{ t('detail.population') }} {{ dates[dates.length - 1]?.slice(0, 4) }}
-          </div>
-          <div class="text-subtitle-1">{{ formatNumber(latest, locale) }}</div>
-        </div>
+        <div class="hero">{{ heroText }}</div>
       </div>
-      <div class="text-caption text-medium-emphasis">{{ fullLabel }}</div>
+
+      <div>
+        <div class="text-caption text-medium-emphasis">
+          {{ t('detail.population') }} {{ dates[dates.length - 1]?.slice(0, 4) }}
+        </div>
+        <div class="text-subtitle-1">{{ formatNumber(latest, locale) }}</div>
+      </div>
     </div>
 
-    <v-divider class="mt-2" />
+    <v-divider />
 
     <div class="px-4 pt-2 text-caption text-medium-emphasis">
       {{ t('detail.last_years', { n: YEARS }) }}
     </div>
 
-    <!-- Scrolls inside its own box so the column never drives page scroll. -->
+    <!-- Years run across the columns so the table is short and wide, which is
+         what a full-width row wants. It scrolls in its own box rather than
+         making the page scroll sideways. -->
     <div class="table-scroll">
-      <v-table density="compact" class="detail-table">
+      <table class="detail-table">
         <thead>
           <tr>
-            <th>{{ t('detail.year') }}</th>
-            <th class="text-end">{{ t('detail.population') }}</th>
-            <th class="text-end">{{ t('detail.change_abs') }}</th>
-            <th class="text-end">{{ t('detail.change_rel') }}</th>
+            <th class="row-label">{{ t('detail.year') }}</th>
+            <th v-for="col in columns" :key="col.year" class="tabular">{{ col.year }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.year">
-            <td class="tabular">{{ row.year }}</td>
-            <td class="text-end tabular">{{ formatNumber(row.population, locale) }}</td>
-            <td class="text-end tabular">{{ formatSigned(row.deltaAbs, locale) }}</td>
-            <td class="text-end tabular">{{ formatPercent(row.deltaRel, locale) }}</td>
+          <tr v-for="measure in measures" :key="measure.key">
+            <th scope="row" class="row-label">{{ measure.label }}</th>
+            <td v-for="col in columns" :key="col.year" class="tabular">
+              {{ measure.value(col) }}
+            </td>
           </tr>
         </tbody>
-      </v-table>
+      </table>
     </div>
   </v-card>
 </template>
 
 <style scoped>
-.detail-card {
-  min-height: 0;
-}
-
 .hero {
   /* Proportional figures: this is a standalone number, not a table column. */
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   line-height: 1.1;
   font-weight: 500;
 }
 
 .table-scroll {
-  flex: 1 1 auto;
-  /* A floor so the table never collapses to a header with no rows, and a cap so
-     it does not run away when the column height is unconstrained. */
-  min-height: 132px;
-  max-height: 460px;
-  overflow-y: auto;
-  /* Keeps the oldest row off the card edge instead of flush against it. */
-  padding-bottom: 4px;
+  overflow-x: auto;
+  padding: 4px 16px 12px;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: 6px 10px;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.detail-table tbody tr:last-child th,
+.detail-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.detail-table thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+/* The leftmost column carries the measure names, so it reads as a header and
+   stays put when the year columns scroll. */
+.row-label {
+  text-align: left !important;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  background: rgb(var(--v-theme-surface));
+  z-index: 1;
 }
 
 /* Deltas stay in ink tokens rather than red/green: population decline is not
    inherently bad, and the explicit signs already carry direction. */
 .tabular {
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.detail-table :deep(th) {
-  font-size: 0.7rem !important;
-  white-space: nowrap;
-}
-
-.detail-table :deep(td) {
-  font-size: 0.78rem !important;
 }
 </style>

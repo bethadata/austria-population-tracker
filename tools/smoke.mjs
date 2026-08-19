@@ -102,21 +102,53 @@ check(zoom.afterZoomIn > zoom.floor + 2, 'zoom-in still unrestricted', `${zoom.a
 
 // Region detail: hero figure naming the map metric, plus ten years of changes.
 const detail = await page.evaluate(() => {
-  const rows = [...document.querySelectorAll('.detail-table tbody tr')]
+  const bodyRows = [...document.querySelectorAll('.detail-table tbody tr')]
+  const headers = [...document.querySelectorAll('.detail-table thead th')].map((h) => h.textContent.trim())
   return {
     hero: document.querySelector('.hero')?.textContent?.trim(),
-    rows: rows.length,
-    cells: rows[0] ? [...rows[0].children].map((c) => c.textContent.trim()) : [],
-    headers: [...document.querySelectorAll('.detail-table thead th')].map((h) => h.textContent.trim()),
+    years: headers.slice(1),
+    measures: bodyRows.map((r) => r.querySelector('th')?.textContent?.trim()),
+    lastCol: bodyRows.map((r) => [...r.querySelectorAll('td')].at(-1)?.textContent?.trim()),
   }
 })
 check(/%|\d/.test(detail.hero ?? ''), 'hero figure rendered', detail.hero)
-check(detail.rows === 10, 'detail table shows ten years', `${detail.rows}`)
-check(detail.headers.length === 4, 'table has year, population, abs and rel change',
-  detail.headers.join('|'))
-check(detail.cells.every((c) => c && c !== '–'), 'newest row is fully populated', detail.cells.join('|'))
+check(detail.years.length === 10, 'table shows ten year columns', detail.years.join(','))
+check(detail.years.join(',') === [...detail.years].sort().join(','), 'years run oldest to newest',
+  detail.years.join(','))
+check(detail.measures.length === 3, 'table has population, abs and rel change rows',
+  detail.measures.join('|'))
+check(detail.lastCol.every((c) => c && c !== '–'), 'latest year column fully populated',
+  detail.lastCol.join('|'))
 
-// Map and chart must occupy the same vertical band, not stack.
+// The table belongs in its own row beneath both, not beside them.
+const stacked = await page.evaluate(() => {
+  const map = document.querySelector('.map-card').getBoundingClientRect()
+  const table = document.querySelector('.detail-table').getBoundingClientRect()
+  return { below: table.top > map.bottom - 5, mapHeight: Math.round(map.height) }
+})
+check(stacked.below, 'year table sits below the map and chart')
+check(stacked.mapHeight < 520, 'map is not stretched to full page height', `${stacked.mapHeight}px`)
+
+// Quarterly year ticks must not collide at the narrower chart width.
+await page.getByRole('button', { name: 'Quartalsweise' }).click()
+await page.waitForTimeout(2400)
+const ticks = await page.evaluate(() => {
+  const t = [...document.querySelectorAll('.js-plotly-plot .xtick text')]
+    .map((e) => ({ text: e.textContent, box: e.getBoundingClientRect() }))
+    .sort((a, b) => a.box.left - b.box.left)
+  let overlaps = 0
+  for (let i = 1; i < t.length; i += 1) {
+    if (t[i].box.left < t[i - 1].box.right) overlaps += 1
+  }
+  return { count: t.length, overlaps, labels: t.map((x) => x.text) }
+})
+check(ticks.count >= 3, 'quarterly axis is labelled', `${ticks.count} ticks`)
+check(ticks.overlaps === 0, 'quarterly tick labels do not overlap',
+  `${ticks.overlaps} overlapping of ${ticks.count}: ${ticks.labels.join(',')}`)
+await page.getByRole('button', { name: 'Jährlich' }).click()
+await page.waitForTimeout(1400)
+
+// Map and chart must occupy the same vertical band in row one.
 const sideBySide = await page.evaluate(() => {
   const map = document.querySelector('.map-card').getBoundingClientRect()
   const chart = document.querySelector('.chart-card').getBoundingClientRect()
@@ -216,12 +248,14 @@ const handoff = await page.evaluate(() => {
     rendered: m ? m.queryRenderedFeatures({ layers: ['regions-fill'] }).length : 0,
     highlight: m ? JSON.stringify(m.getFilter('regions-selected')) : '',
     name: document.querySelector('.region-name')?.textContent?.trim(),
-    rows: document.querySelectorAll('.detail-table tbody tr').length,
+    measures: document.querySelectorAll('.detail-table tbody tr').length,
+    years: document.querySelectorAll('.detail-table thead th').length - 1,
   }
 })
 check(handoff.rendered > 100, 'map still renders after a Gemeinde handoff', `${handoff.rendered}`)
 check(!/"code"\],""\]/.test(handoff.highlight), 'containing district is outlined', handoff.highlight)
-check(handoff.rows === 10, 'Gemeinde detail table populated', `${handoff.rows}`)
+check(handoff.measures === 3 && handoff.years === 10, 'Gemeinde detail table populated',
+  `${handoff.measures} measures x ${handoff.years} years`)
 
 // ... and the map must remain clickable afterwards.
 const box2 = await page.locator('.map-canvas').boundingBox()

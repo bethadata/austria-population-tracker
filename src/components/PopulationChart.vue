@@ -138,11 +138,7 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
       tickcolor: chrome.axis,
       tickfont: { color: chrome.muted },
       automargin: true,
-      // 67 quarters labelled individually turns the axis into a wall of rotated
-      // text. Label one per year and let the tooltip carry the exact quarter.
-      ...(isQuarterly.value
-        ? { tickmode: 'linear' as const, tick0: 0, dtick: 4, tickangle: 0 }
-        : {}),
+      ...(isQuarterly.value ? quarterlyTicks() : {}),
     },
     yaxis: {
       title: { text: yTitle.value, font: { color: chrome.secondary } },
@@ -176,6 +172,34 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
   }
 }
 
+/**
+ * Year ticks for the quarterly axis, thinned to what actually fits.
+ *
+ * 67 quarters cannot all be labelled. Even one label per year overlaps once the
+ * plot is narrow, so the step is derived from the measured width and the labels
+ * are reduced to the bare year - the hover box carries the exact quarter.
+ * Category axes take tick positions as indices, not as category names.
+ */
+function quarterlyTicks(): Partial<Plotly.LayoutAxis> {
+  const labels = dates.value
+  const yearStarts = labels
+    .map((iso, index) => ({ index, year: iso.slice(0, 4), isFirst: iso.slice(5, 7) === '01' }))
+    .filter((entry) => entry.isFirst)
+
+  const width = container.value?.clientWidth ?? 600
+  const perLabel = 42
+  const maxLabels = Math.max(3, Math.floor((width - 70) / perLabel))
+  const step = Math.max(1, Math.ceil(yearStarts.length / maxLabels))
+  const picked = yearStarts.filter((_, i) => i % step === 0)
+
+  return {
+    tickmode: 'array',
+    tickvals: picked.map((entry) => entry.index),
+    ticktext: picked.map((entry) => entry.year),
+    tickangle: 0,
+  }
+}
+
 const CONFIG: Partial<Plotly.Config> = {
   displaylogo: false,
   responsive: true,
@@ -188,9 +212,22 @@ async function render() {
   await Plotly.react(container.value, traces, layout(shapes), CONFIG)
 }
 
+let resizeObserver: ResizeObserver | null = null
+let resizeTimer: number | undefined
+
 onMounted(async () => {
   if (props.frequency === 'quarterly') await store.ensureQuarterly()
   await render()
+
+  // Plotly's own responsive handling rescales the plot but cannot know that the
+  // tick step depends on width, so a re-render is needed on resize.
+  if (container.value) {
+    resizeObserver = new ResizeObserver(() => {
+      window.clearTimeout(resizeTimer)
+      resizeTimer = window.setTimeout(render, 150)
+    })
+    resizeObserver.observe(container.value)
+  }
 })
 
 watch(
@@ -201,6 +238,8 @@ watch(
   { immediate: true },
 )
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  window.clearTimeout(resizeTimer)
   if (container.value) Plotly.purge(container.value)
 })
 

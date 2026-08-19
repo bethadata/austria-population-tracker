@@ -82,11 +82,11 @@ watch(
       </v-card-text>
     </v-card>
 
-    <!-- Map and time series sit side by side so both are readable without
-         scrolling; the right column stacks the chart above the region detail and
-         matches the map's height exactly. -->
+    <!-- Row one: map and time series beside each other. Row two: the year table
+         across the full width. Splitting it this way keeps the map from being
+         stretched to the full page height just to match a tall side column. -->
     <v-row class="content-row" no-gutters>
-      <v-col cols="12" lg="6" class="pe-lg-3 pb-3 pb-lg-0 map-column">
+      <v-col cols="12" lg="7" class="pe-lg-3 pb-3 pb-lg-0 map-column">
         <v-card flat border class="map-card">
           <RegionMap />
         </v-card>
@@ -95,8 +95,8 @@ watch(
         </div>
       </v-col>
 
-      <v-col cols="12" lg="6" class="right-column">
-        <v-card flat border class="chart-card mb-3 flex-shrink-0">
+      <v-col cols="12" lg="5" class="chart-column">
+        <v-card flat border class="chart-card">
           <v-card-text class="pb-1">
             <div class="d-flex flex-wrap ga-3 align-center mb-1">
               <v-select
@@ -106,7 +106,7 @@ watch(
                 density="compact"
                 variant="outlined"
                 hide-details
-                style="max-width: 200px"
+                style="max-width: 190px"
               />
 
               <v-btn-toggle
@@ -123,7 +123,8 @@ watch(
 
               <v-switch
                 v-model="byCitizenship"
-                :label="t('chart.citizenship')"
+                :label="t('chart.citizenship_short')"
+                :title="t('chart.citizenship')"
                 density="compact"
                 color="primary"
                 hide-details
@@ -134,7 +135,7 @@ watch(
               :view="view"
               :frequency="frequency"
               :by-citizenship="byCitizenship"
-              :height="200"
+              :height="230"
             />
 
             <div v-if="chartNote" class="text-caption text-medium-emphasis">
@@ -142,10 +143,10 @@ watch(
             </div>
           </v-card-text>
         </v-card>
-
-        <RegionDetail class="detail-fill" />
       </v-col>
     </v-row>
+
+    <RegionDetail class="mt-3" />
   </v-container>
 </template>
 
@@ -155,17 +156,20 @@ watch(
   flex-direction: column;
 }
 
-/* Side by side from lg up, so the map and the time series share one view. */
 @media (min-width: 1280px) {
+  /* One shared height for the row, sized to the chart rather than to the
+     viewport - the map only needs about a third of its width in height, so
+     stretching it further just adds empty space above and below Austria. */
   .content-row {
+    height: clamp(300px, 38vh, 470px);
     /* Vuetify's .v-row wraps by default, which makes the single flex line's
-       cross size content-driven - so align-items: stretch would never cap the
+       cross size content-driven, so align-items: stretch would never cap the
        columns to the row height. nowrap is what actually constrains them. */
     flex-wrap: nowrap;
   }
 
   .map-column,
-  .right-column {
+  .chart-column {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -177,36 +181,24 @@ watch(
     min-height: 0;
   }
 
-  .detail-fill {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-}
-
-/* Lock the whole page to one viewport only when the window is actually tall
-   enough to hold it. Forcing this at 768px high squeezed the detail table down
-   to zero visible rows, which is worse than letting the page scroll. */
-@media (min-width: 1280px) and (min-height: 900px) {
-  .content-row {
-    height: calc(100vh - 236px);
-  }
-}
-
-@media (min-width: 1280px) and (max-height: 899px) {
-  .map-card {
-    height: 520px;
+  .chart-card {
+    height: 100%;
+    overflow: hidden;
   }
 }
 
 .map-card {
-  min-height: 380px;
+  min-height: 300px;
   overflow: hidden;
 }
 
 @media (max-width: 1279px) {
   .map-card {
-    height: 460px;
+    height: 420px;
+  }
+
+  .chart-column {
+    margin-top: 12px;
   }
 }
 </style>
