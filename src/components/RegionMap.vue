@@ -50,6 +50,8 @@ const BOUNDS: [[number, number], [number, number]] = [
   [17.4, 49.2],
 ]
 
+const FIT_PADDING = 24
+
 /**
  * No basemap layer by design: the map shows administrative polygons only. That
  * removes any external tile provider, API key or network dependency, which
@@ -209,7 +211,7 @@ onMounted(async () => {
     container: container.value,
     style: baseStyle(),
     bounds: BOUNDS,
-    fitBoundsOptions: { padding: 24 },
+    fitBoundsOptions: { padding: FIT_PADDING },
     attributionControl: false,
   })
   instance.addControl(new NavigationControl({ showCompass: false }), 'top-right')
@@ -227,8 +229,13 @@ onMounted(async () => {
     map.value = instance
     addLayers()
     bindInteractions()
+    applyMinZoom(instance)
     ;(window as unknown as { __aptMap?: unknown }).__aptMap = instance
   })
+
+  // The fitted zoom depends on the container size, so it has to be recomputed
+  // whenever the map is resized rather than captured once.
+  instance.on('resize', () => applyMinZoom(instance))
 })
 
 onBeforeUnmount(() => {
@@ -277,8 +284,22 @@ watch(mode, (value) => {
   instance.setPaintProperty(SELECTED, 'line-color', CHROME[value].primary)
 })
 
+/**
+ * Pin the zoom floor to the whole-country view.
+ *
+ * Austria is the entire subject of the map, so zooming out past it only adds
+ * empty space. Deriving the floor from cameraForBounds keeps it exact for the
+ * current container instead of hard-coding a level that would be wrong at
+ * another viewport size.
+ */
+function applyMinZoom(instance: MapLibreMap) {
+  const camera = instance.cameraForBounds(BOUNDS, { padding: FIT_PADDING })
+  if (camera?.zoom === undefined) return
+  instance.setMinZoom(camera.zoom)
+}
+
 function resetView() {
-  map.value?.fitBounds(BOUNDS, { padding: 24 })
+  map.value?.fitBounds(BOUNDS, { padding: FIT_PADDING })
 }
 
 defineExpose({ resetView })

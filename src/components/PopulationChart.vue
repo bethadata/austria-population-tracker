@@ -15,11 +15,16 @@ import { CHROME, SERIES } from '@/utils/palette'
 
 type ChartView = 'absolute' | 'change_relative' | 'change_absolute' | 'indexed'
 
-const props = defineProps<{
-  view: ChartView
-  frequency: 'annual' | 'quarterly'
-  byCitizenship: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    view: ChartView
+    frequency: 'annual' | 'quarterly'
+    byCitizenship: boolean
+    /** Plot height in px. The side-by-side layout runs it shorter than default. */
+    height?: number
+  }>(),
+  { height: 340 },
+)
 
 const store = usePopulationStore()
 const { mode } = useAppTheme()
@@ -117,8 +122,8 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
   const chrome = CHROME[mode.value]
   return {
     autosize: true,
-    height: 340,
-    margin: { l: 64, r: 16, t: 12, b: 44 },
+    height: props.height,
+    margin: { l: 58, r: 12, t: 8, b: 36 },
     paper_bgcolor: chrome.surface,
     plot_bgcolor: chrome.surface,
     font: {
@@ -210,6 +215,7 @@ watch(
     () => props.byCitizenship,
     () => store.quarterly,
     () => store.annual,
+    () => props.height,
     mode,
     locale,
   ],

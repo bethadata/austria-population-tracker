@@ -4,43 +4,34 @@ import { useI18n } from 'vue-i18n'
 
 import MapLegend from '@/components/MapLegend.vue'
 import PopulationChart from '@/components/PopulationChart.vue'
+import RegionDetail from '@/components/RegionDetail.vue'
 import RegionMap from '@/components/RegionMap.vue'
+import { useMetricLabel } from '@/composables/useMetricLabel'
 import { usePopulationStore } from '@/stores/population'
 import type { Level, Metric, Window } from '@/types/data'
-import { formatNumber, formatPercent } from '@/utils/format'
-import { computeMetric } from '@/utils/metrics'
 
 const store = usePopulationStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const { windowLabel } = useMetricLabel()
 
 // Only these two levels have boundary geometry; everything else is list-only.
 const MAP_LEVELS: Level[] = ['nuts2', 'district']
 const METRICS: Metric[] = ['cagr', 'relative_change', 'absolute_change']
 const WINDOWS: Window[] = [1, 5, 10, 24]
 
-const view = ref<'absolute' | 'change_relative' | 'change_absolute' | 'indexed'>('absolute')
+type ChartView = 'absolute' | 'change_relative' | 'change_absolute' | 'indexed'
+const CHART_VIEWS: ChartView[] = ['absolute', 'change_relative', 'change_absolute', 'indexed']
+
+const view = ref<ChartView>('absolute')
 const frequency = ref<'annual' | 'quarterly'>('annual')
 const byCitizenship = ref(false)
 
-const region = computed(() => store.selectedRegion)
-const displayName = computed(() =>
-  region.value ? (locale.value === 'en' ? region.value.name_en : region.value.name_de) : '',
-)
-
-const series = computed(() => store.seriesFor(store.selected) ?? [])
-const dates = computed(() => store.datesFor(store.selected))
-
-const latest = computed(() => series.value[series.value.length - 1] ?? null)
-const latestDate = computed(() => dates.value[dates.value.length - 1] ?? '')
-
-const headlineChange = computed(() =>
-  computeMetric(series.value, store.metric as Metric, store.window as Window),
-)
-
-const windowLabel = (w: Window) =>
-  w === 24
-    ? t('metric.window_since', { year: 2002 })
-    : t('metric.window_years', { n: w })
+// Rendered only when non-empty, so an absent note costs no vertical space.
+const chartNote = computed(() => {
+  if (frequency.value === 'quarterly') return t('chart.provisional_note')
+  if (!store.hasQuarterly(store.selected)) return t('chart.quarterly_hint')
+  return ''
+})
 
 // Quarterly detail only exists at Bundesland level, so a selection below that
 // falls back to annual rather than silently rendering an empty chart.
@@ -50,16 +41,12 @@ watch(
     if (!store.hasQuarterly(store.selected)) frequency.value = 'annual'
   },
 )
-
-watch(frequency, async (value) => {
-  if (value === 'quarterly') await store.ensureQuarterly()
-})
 </script>
 
 <template>
-  <v-container fluid class="pa-4">
-    <!-- Controls sit in one row above the map, never interleaved with it. -->
-    <v-card flat border class="mb-4">
+  <v-container fluid class="pa-4 map-page">
+    <!-- Filters in one row above everything, never interleaved with the views. -->
+    <v-card flat border class="mb-3 flex-shrink-0">
       <v-card-text class="d-flex flex-wrap ga-4 align-center py-3">
         <v-btn-toggle v-model="store.level" density="compact" variant="outlined" divided mandatory>
           <v-btn v-for="lvl in MAP_LEVELS" :key="lvl" :value="lvl" size="small">
@@ -74,7 +61,7 @@ watch(frequency, async (value) => {
           density="compact"
           variant="outlined"
           hide-details
-          style="max-width: 240px"
+          style="max-width: 230px"
         />
 
         <v-select
@@ -84,115 +71,137 @@ watch(frequency, async (value) => {
           density="compact"
           variant="outlined"
           hide-details
-          style="max-width: 170px"
+          style="max-width: 165px"
         />
 
         <v-spacer />
 
-        <div style="min-width: 260px; max-width: 340px; flex: 1 1 260px">
+        <div style="min-width: 250px; max-width: 330px; flex: 1 1 250px">
           <MapLegend />
         </div>
       </v-card-text>
     </v-card>
 
-    <v-row>
-      <v-col cols="12" md="7">
+    <!-- Map and time series sit side by side so both are readable without
+         scrolling; the right column stacks the chart above the region detail and
+         matches the map's height exactly. -->
+    <v-row class="content-row" no-gutters>
+      <v-col cols="12" lg="6" class="pe-lg-3 pb-3 pb-lg-0">
         <v-card flat border class="map-card">
           <RegionMap />
         </v-card>
-        <div class="text-caption text-medium-emphasis mt-2">{{ t('map.hint') }}</div>
       </v-col>
 
-      <v-col cols="12" md="5">
-        <v-card flat border class="h-100">
-          <v-card-item>
-            <v-card-title class="text-h6">{{ displayName }}</v-card-title>
-            <v-card-subtitle>
-              {{ t(`levels_short.${region?.level}`) }} · {{ region?.code }}
-            </v-card-subtitle>
-          </v-card-item>
+      <v-col cols="12" lg="6" class="right-column">
+        <v-card flat border class="chart-card mb-3 flex-shrink-0">
+          <v-card-text class="pb-1">
+            <div class="d-flex flex-wrap ga-3 align-center mb-1">
+              <v-select
+                v-model="view"
+                :items="CHART_VIEWS.map((v) => ({ title: t(`chart.${v}`), value: v }))"
+                :label="t('chart.view')"
+                density="compact"
+                variant="outlined"
+                hide-details
+                style="max-width: 200px"
+              />
 
-          <v-card-text>
-            <!-- Two figures, not a chart: a single value each, so a stat pair
-                 reads faster than any plot would. -->
-            <div class="d-flex ga-8 mb-2">
-              <div>
-                <div class="text-caption text-medium-emphasis">
-                  {{ t('chart.population') }} {{ latestDate.slice(0, 4) }}
-                </div>
-                <div class="text-h5">{{ formatNumber(latest, locale) }}</div>
-              </div>
-              <div>
-                <div class="text-caption text-medium-emphasis">
-                  {{ t(`metric.${store.metric}`) }}
-                </div>
-                <div class="text-h5">
-                  {{
-                    store.metric === 'absolute_change'
-                      ? formatNumber(headlineChange, locale)
-                      : formatPercent(headlineChange, locale)
-                  }}
-                </div>
-              </div>
+              <v-btn-toggle
+                v-model="frequency"
+                density="compact"
+                variant="outlined"
+                divided
+                mandatory
+                :disabled="!store.hasQuarterly(store.selected)"
+              >
+                <v-btn value="annual" size="small">{{ t('chart.annual') }}</v-btn>
+                <v-btn value="quarterly" size="small">{{ t('chart.quarterly') }}</v-btn>
+              </v-btn-toggle>
+
+              <v-switch
+                v-model="byCitizenship"
+                :label="t('chart.citizenship')"
+                density="compact"
+                color="primary"
+                hide-details
+              />
+            </div>
+
+            <PopulationChart
+              :view="view"
+              :frequency="frequency"
+              :by-citizenship="byCitizenship"
+              :height="200"
+            />
+
+            <div v-if="chartNote" class="text-caption text-medium-emphasis">
+              {{ chartNote }}
             </div>
           </v-card-text>
         </v-card>
+
+        <RegionDetail class="detail-fill" />
       </v-col>
     </v-row>
 
-    <v-card flat border class="mt-4">
-      <v-card-text>
-        <div class="d-flex flex-wrap ga-4 align-center mb-3">
-          <v-btn-toggle v-model="view" density="compact" variant="outlined" divided mandatory>
-            <v-btn value="absolute" size="small">{{ t('chart.absolute') }}</v-btn>
-            <v-btn value="change_relative" size="small">{{ t('chart.change_relative') }}</v-btn>
-            <v-btn value="change_absolute" size="small">{{ t('chart.change_absolute') }}</v-btn>
-            <v-btn value="indexed" size="small">{{ t('chart.indexed') }}</v-btn>
-          </v-btn-toggle>
-
-          <v-btn-toggle
-            v-model="frequency"
-            density="compact"
-            variant="outlined"
-            divided
-            mandatory
-            :disabled="!store.hasQuarterly(store.selected)"
-          >
-            <v-btn value="annual" size="small">{{ t('chart.annual') }}</v-btn>
-            <v-btn value="quarterly" size="small">{{ t('chart.quarterly') }}</v-btn>
-          </v-btn-toggle>
-
-          <v-switch
-            v-model="byCitizenship"
-            :label="t('chart.citizenship')"
-            density="compact"
-            color="primary"
-            hide-details
-          />
-        </div>
-
-        <PopulationChart :view="view" :frequency="frequency" :by-citizenship="byCitizenship" />
-
-        <div
-          v-if="frequency === 'quarterly'"
-          class="text-caption text-medium-emphasis mt-2"
-        >
-          {{ t('chart.provisional_note') }}
-        </div>
-        <div
-          v-else-if="!store.hasQuarterly(store.selected)"
-          class="text-caption text-medium-emphasis mt-2"
-        >
-          {{ t('chart.quarterly_hint') }}
-        </div>
-      </v-card-text>
-    </v-card>
+    <div class="text-caption text-medium-emphasis mt-2">{{ t('map.hint') }}</div>
   </v-container>
 </template>
 
 <style scoped>
+.map-page {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Side by side from lg up, so the map and the time series share one view. */
+@media (min-width: 1280px) {
+  .content-row {
+    /* Vuetify's .v-row wraps by default, which makes the single flex line's
+       cross size content-driven - so align-items: stretch would never cap the
+       columns to the row height. nowrap is what actually constrains them. */
+    flex-wrap: nowrap;
+  }
+
+  .right-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .detail-fill {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .map-card {
+    height: 100%;
+  }
+}
+
+/* Lock the whole page to one viewport only when the window is actually tall
+   enough to hold it. Forcing this at 768px high squeezed the detail table down
+   to zero visible rows, which is worse than letting the page scroll. */
+@media (min-width: 1280px) and (min-height: 900px) {
+  .content-row {
+    height: calc(100vh - 236px);
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 899px) {
+  .map-card {
+    height: 520px;
+  }
+}
+
 .map-card {
-  height: 520px;
+  min-height: 380px;
   overflow: hidden;
+}
+
+@media (max-width: 1279px) {
+  .map-card {
+    height: 460px;
+  }
 }
 </style>

@@ -50,7 +50,7 @@ const box = await page.locator('.map-canvas').boundingBox()
 const pt = await page.evaluate(() => { const q = window.__aptMap.project([16.37, 48.21]); return { x: q.x, y: q.y } })
 await page.mouse.click(box.x + pt.x, box.y + pt.y)
 await page.waitForTimeout(1500)
-const title = (await page.locator('.v-card-title').first().textContent())?.trim()
+const title = (await page.locator('.region-name').first().textContent())?.trim()
 const filter = await page.evaluate(() => JSON.stringify(window.__aptMap.getFilter('regions-selected')))
 check(title === 'Wien', 'clicking Vienna selects it', `title=${title}`)
 check(filter.includes('AT13'), 'selection outline follows the click', filter)
@@ -82,6 +82,48 @@ await page.getByRole('button', { name: 'Bezirke' }).click()
 await page.waitForTimeout(3500)
 const bez = await page.evaluate(() => window.__aptMap.queryRenderedFeatures({ layers: ['regions-fill'] }).length)
 check(bez > 100, 'district level renders its polygons', `rendered=${bez}`)
+
+// Zoom floor: the whole-country view is the widest allowed.
+await page.getByRole('button', { name: 'Bundesländer' }).click()
+await page.waitForTimeout(2500)
+const zoom = await page.evaluate(async () => {
+  const m = window.__aptMap
+  const floor = m.getMinZoom()
+  m.zoomTo(2, { duration: 0 })
+  await new Promise((r) => setTimeout(r, 400))
+  const out = m.getZoom()
+  m.zoomTo(9, { duration: 0 })
+  await new Promise((r) => setTimeout(r, 400))
+  return { floor, afterZoomOut: out, afterZoomIn: m.getZoom() }
+})
+check(Math.abs(zoom.afterZoomOut - zoom.floor) < 0.01, 'zoom-out clamped to default view',
+  `floor=${zoom.floor.toFixed(2)} got=${zoom.afterZoomOut.toFixed(2)}`)
+check(zoom.afterZoomIn > zoom.floor + 2, 'zoom-in still unrestricted', `${zoom.afterZoomIn}`)
+
+// Region detail: hero figure naming the map metric, plus ten years of changes.
+const detail = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('.detail-table tbody tr')]
+  return {
+    hero: document.querySelector('.hero')?.textContent?.trim(),
+    rows: rows.length,
+    cells: rows[0] ? [...rows[0].children].map((c) => c.textContent.trim()) : [],
+    headers: [...document.querySelectorAll('.detail-table thead th')].map((h) => h.textContent.trim()),
+  }
+})
+check(/%|\d/.test(detail.hero ?? ''), 'hero figure rendered', detail.hero)
+check(detail.rows === 10, 'detail table shows ten years', `${detail.rows}`)
+check(detail.headers.length === 4, 'table has year, population, abs and rel change',
+  detail.headers.join('|'))
+check(detail.cells.every((c) => c && c !== '–'), 'newest row is fully populated', detail.cells.join('|'))
+
+// Map and chart must occupy the same vertical band, not stack.
+const sideBySide = await page.evaluate(() => {
+  const map = document.querySelector('.map-card').getBoundingClientRect()
+  const chart = document.querySelector('.chart-card').getBoundingClientRect()
+  return { overlap: Math.min(map.bottom, chart.bottom) - Math.max(map.top, chart.top), chartH: chart.height }
+})
+check(sideBySide.overlap > 100, 'map and chart share one view (side by side)',
+  `overlap=${Math.round(sideBySide.overlap)}`)
 
 // List page
 await page.goto(BASE + '#/list', { waitUntil: 'domcontentloaded' })

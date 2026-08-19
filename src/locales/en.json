@@ -63,6 +63,15 @@
     "population": "Population",
     "no_data": "No data available"
   },
+  "detail": {
+    "map_indicator": "Map indicator",
+    "last_years": "Last {n} years",
+    "year": "Year",
+    "population": "Population",
+    "change_abs": "Δ people",
+    "change_rel": "Δ %",
+    "no_selection": "No region selected"
+  },
   "map": {
     "title": "Map",
     "level": "Level",
@@ -71,7 +80,7 @@
     "shrinking": "Shrinking",
     "growing": "Growing",
     "reset": "Reset view",
-    "hint": "Click a region to show its time series below.",
+    "hint": "Click a region on the map to show its time series and figures.",
     "selected": "Selected"
   },
   "list": {

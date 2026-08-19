@@ -63,6 +63,15 @@
     "population": "Bevölkerung",
     "no_data": "Keine Daten verfügbar"
   },
+  "detail": {
+    "map_indicator": "Kennzahl der Karte",
+    "last_years": "Letzte {n} Jahre",
+    "year": "Jahr",
+    "population": "Bevölkerung",
+    "change_abs": "Δ Personen",
+    "change_rel": "Δ %",
+    "no_selection": "Keine Region ausgewählt"
+  },
   "map": {
     "title": "Karte",
     "level": "Ebene",
@@ -71,7 +80,7 @@
     "shrinking": "Rückgang",
     "growing": "Wachstum",
     "reset": "Ansicht zurücksetzen",
-    "hint": "Region anklicken, um die Zeitreihe unten anzuzeigen.",
+    "hint": "Region auf der Karte anklicken, um deren Zeitreihe und Kennzahlen anzuzeigen.",
     "selected": "Ausgewählt"
   },
   "list": {
