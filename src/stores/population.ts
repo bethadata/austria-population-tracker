@@ -16,6 +16,9 @@ import { computeMetric } from '@/utils/metrics'
 
 const BASE = import.meta.env.BASE_URL
 
+/** Levels with boundary geometry, coarsest first. Mirrors pipeline/regions.py. */
+const MAPPED_LEVELS: Level[] = ['nuts2', 'district']
+
 async function loadJson<T>(path: string): Promise<T> {
   const response = await fetch(`${BASE}data/${path}`)
   if (!response.ok) throw new Error(`failed to load ${path}: ${response.status}`)
@@ -35,7 +38,13 @@ export const usePopulationStore = defineStore('population', () => {
 
   // View state, shared between the map and list pages so that a region selected
   // on one is still selected on the other.
+  //
+  // `level` is the list's browsing level and reaches down to municipality;
+  // `mapLevel` is the map's own and is restricted to the two levels that have
+  // boundary geometry. They are deliberately separate: browsing to a Gemeinde in
+  // the list must not leave the map asking for geometry that does not exist.
   const level = ref<Level>('nuts2')
+  const mapLevel = ref<Level>('nuts2')
   const selected = ref<string>('AT')
   const metric = ref<Metric>('cagr')
   const window = ref<Window>(5)
@@ -99,7 +108,7 @@ export const usePopulationStore = defineStore('population', () => {
 
   /** Metric value per region for one level - drives both map fill and ranking. */
   const metricByCode = computed<Map<string, number | null>>(() => {
-    const file = annual.value.get(level.value)
+    const file = annual.value.get(mapLevel.value)
     const result = new Map<string, number | null>()
     if (!file) return result
     for (const [code, series] of Object.entries(file.series)) {
@@ -129,6 +138,37 @@ export const usePopulationStore = defineStore('population', () => {
 
   const selectedRegion = computed(() => byCode.value.get(selected.value) ?? null)
 
+  /** Walk up the hierarchy to the given level; returns the code itself if it already matches. */
+  function ancestorAt(code: string, target: Level): string | null {
+    let current = byCode.value.get(code)
+    while (current && current.level !== target) {
+      current = current.parent ? byCode.value.get(current.parent) : undefined
+    }
+    return current?.code ?? null
+  }
+
+  /**
+   * Which polygon the map should outline.
+   *
+   * A selection made in the list can be a Gemeinde, which has no polygon. The
+   * map then outlines the mapped region containing it, so the selection is still
+   * located on screen while the chart and detail panel describe the Gemeinde.
+   */
+  const mapHighlight = computed(() => ancestorAt(selected.value, mapLevel.value as Level))
+
+  /**
+   * Point the map at the finest mapped level that can show this region, used when
+   * navigating from the list so the map arrives on something meaningful.
+   */
+  function focusMapOn(code: string) {
+    for (const candidate of [...MAPPED_LEVELS].reverse()) {
+      if (ancestorAt(code, candidate)) {
+        mapLevel.value = candidate
+        return
+      }
+    }
+  }
+
   return {
     manifest,
     regions,
@@ -139,6 +179,7 @@ export const usePopulationStore = defineStore('population', () => {
     ready,
     error,
     level,
+    mapLevel,
     selected,
     metric,
     window,
@@ -154,5 +195,8 @@ export const usePopulationStore = defineStore('population', () => {
     metricByCode,
     ranked,
     selectedRegion,
+    ancestorAt,
+    mapHighlight,
+    focusMapOn,
   }
 })

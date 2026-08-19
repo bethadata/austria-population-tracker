@@ -132,6 +132,19 @@ values exactly for all other districts in every year, and the corrections are re
 
 ## Notes for maintainers
 
+### Map level and list level are separate
+
+`store.level` is the list's browsing level and reaches down to municipality;
+`store.mapLevel` is the map's own and is restricted to the two levels that have
+geometry. Keeping them separate is not cosmetic — sharing one level meant that
+selecting a Gemeinde in the list left the map requesting
+`geo/municipality.geojson`, which does not exist. The fetch failed, the source
+never loaded, and the map went blank *and* stopped responding to clicks.
+
+When a selection has no polygon of its own, `mapHighlight` walks up the hierarchy
+and outlines the mapped region containing it, so the selection is still located on
+screen while the chart and detail panel describe the Gemeinde.
+
 ### MapLibre's worker must be imported explicitly
 
 MapLibre derives its worker URL from `import.meta.url` of its own bundle,

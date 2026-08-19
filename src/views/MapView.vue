@@ -48,7 +48,7 @@ watch(
     <!-- Filters in one row above everything, never interleaved with the views. -->
     <v-card flat border class="mb-3 flex-shrink-0">
       <v-card-text class="d-flex flex-wrap ga-4 align-center py-3">
-        <v-btn-toggle v-model="store.level" density="compact" variant="outlined" divided mandatory>
+        <v-btn-toggle v-model="store.mapLevel" density="compact" variant="outlined" divided mandatory>
           <v-btn v-for="lvl in MAP_LEVELS" :key="lvl" :value="lvl" size="small">
             {{ t(`levels.${lvl}`) }}
           </v-btn>
@@ -61,7 +61,7 @@ watch(
           density="compact"
           variant="outlined"
           hide-details
-          style="max-width: 230px"
+          style="min-width: 265px"
         />
 
         <v-select
@@ -86,10 +86,13 @@ watch(
          scrolling; the right column stacks the chart above the region detail and
          matches the map's height exactly. -->
     <v-row class="content-row" no-gutters>
-      <v-col cols="12" lg="6" class="pe-lg-3 pb-3 pb-lg-0">
+      <v-col cols="12" lg="6" class="pe-lg-3 pb-3 pb-lg-0 map-column">
         <v-card flat border class="map-card">
           <RegionMap />
         </v-card>
+        <div class="text-caption text-medium-emphasis mt-2 flex-shrink-0">
+          {{ t('map.hint') }}
+        </div>
       </v-col>
 
       <v-col cols="12" lg="6" class="right-column">
@@ -143,8 +146,6 @@ watch(
         <RegionDetail class="detail-fill" />
       </v-col>
     </v-row>
-
-    <div class="text-caption text-medium-emphasis mt-2">{{ t('map.hint') }}</div>
   </v-container>
 </template>
 
@@ -163,9 +164,16 @@ watch(
     flex-wrap: nowrap;
   }
 
+  .map-column,
   .right-column {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+  }
+
+  /* The map takes the column's leftover height; the hint keeps its own. */
+  .map-card {
+    flex: 1 1 auto;
     min-height: 0;
   }
 
@@ -174,9 +182,6 @@ watch(
     min-height: 0;
   }
 
-  .map-card {
-    height: 100%;
-  }
 }
 
 /* Lock the whole page to one viewport only when the window is actually tall

@@ -66,8 +66,10 @@ const headers = computed(() => [
 
 function open(code: string) {
   store.selected = code
-  // Only mapped levels can show a selection on the map; for the others the
-  // chart still works, so the level switch happens there rather than here.
+  // A Gemeinde has no polygon of its own, so aim the map at the finest level that
+  // does contain it. The chart and detail panel still describe the Gemeinde; the
+  // map outlines its district.
+  store.focusMapOn(code)
   router.push('/')
 }
 </script>

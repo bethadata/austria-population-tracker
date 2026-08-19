@@ -24,7 +24,8 @@ import { useI18n } from 'vue-i18n'
 import { useAppTheme } from '@/composables/useTheme'
 import { usePopulationStore } from '@/stores/population'
 import type { Level } from '@/types/data'
-import { formatNumber, formatPercent } from '@/utils/format'
+import { useMetricLabel } from '@/composables/useMetricLabel'
+import { formatNumber, formatPercent, formatSigned } from '@/utils/format'
 import { CHROME, divergingStops } from '@/utils/palette'
 
 setWorkerUrl(maplibreWorkerUrl)
@@ -32,6 +33,7 @@ setWorkerUrl(maplibreWorkerUrl)
 const store = usePopulationStore()
 const { mode } = useAppTheme()
 const { t, locale } = useI18n()
+const { metricLabel, isPercent } = useMetricLabel()
 
 const container = ref<HTMLDivElement | null>(null)
 const map = shallowRef<MapLibreMap | null>(null)
@@ -70,7 +72,7 @@ function baseStyle(): StyleSpecification {
 
 /** Merge the active metric into the geometry so the fill can read it directly. */
 const decorated = computed<GeoJSON.FeatureCollection | null>(() => {
-  const geometry = store.geo.get(store.level as Level)
+  const geometry = store.geo.get(store.mapLevel as Level)
   if (!geometry) return null
   const values = store.metricByCode
   return {
@@ -142,8 +144,14 @@ function addLayers() {
       'line-color': CHROME[mode.value].primary,
       'line-width': 2.5,
     },
-    filter: ['==', ['get', 'code'], store.selected] as never,
+    filter: ['==', ['get', 'code'], store.mapHighlight ?? ''] as never,
   })
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string
+  ))
 }
 
 const popup = new Popup({ closeButton: false, closeOnClick: false, offset: 8 })
@@ -164,19 +172,21 @@ function bindInteractions() {
     instance.setFeatureState({ source: SOURCE, id: code }, { hover: true })
     instance.getCanvas().style.cursor = 'pointer'
 
-    const value = feature.properties?.value
-    const series = store.annual.get(store.level as Level)?.series[code]?.total
+    const raw = feature.properties?.value
+    const value = typeof raw === 'number' ? raw : null
+    const series = store.annual.get(store.mapLevel as Level)?.series[code]?.total
     const latest = series ? series[series.length - 1] : null
+    // Absolute change is a head count, so it must not be suffixed with '%'.
+    const metricText = isPercent.value
+      ? formatPercent(value, locale.value)
+      : formatSigned(value, locale.value)
     popup
       .setLngLat(event.lngLat)
       .setHTML(
         `<div class="map-tip">
-           <strong>${feature.properties?.name ?? code}</strong>
-           <span>${t('chart.population')}: ${formatNumber(latest ?? null, locale.value)}</span>
-           <span>${t('map.legend')}: ${formatPercent(
-             typeof value === 'number' ? value : null,
-             locale.value,
-           )}</span>
+           <strong>${escapeHtml(String(feature.properties?.name ?? code))}</strong>
+           <span>${escapeHtml(t('chart.population'))}: ${formatNumber(latest ?? null, locale.value)}</span>
+           <span>${escapeHtml(metricLabel.value)}: ${metricText}</span>
          </div>`,
       )
       .addTo(instance)
@@ -199,7 +209,7 @@ function bindInteractions() {
 
 async function ensureData() {
   loading.value = true
-  await Promise.all([store.ensureLevel(store.level as Level), store.ensureGeo(store.level as Level)])
+  await Promise.all([store.ensureLevel(store.mapLevel as Level), store.ensureGeo(store.mapLevel as Level)])
   loading.value = false
 }
 
@@ -230,6 +240,7 @@ onMounted(async () => {
     addLayers()
     bindInteractions()
     applyMinZoom(instance)
+    applyTipTheme(instance)
     ;(window as unknown as { __aptMap?: unknown }).__aptMap = instance
   })
 
@@ -246,7 +257,7 @@ onBeforeUnmount(() => {
 
 // Level change swaps both geometry and values; rebuild the source data wholesale.
 watch(
-  () => store.level,
+  () => store.mapLevel,
   async () => {
     await ensureData()
     const source = map.value?.getSource(SOURCE) as GeoJSONSource | undefined
@@ -261,10 +272,10 @@ watch(decorated, (value) => {
 })
 
 watch(
-  () => store.selected,
+  () => store.mapHighlight,
   (code) => {
     if (map.value?.getLayer(SELECTED)) {
-      map.value.setFilter(SELECTED, ['==', ['get', 'code'], code] as never)
+      map.value.setFilter(SELECTED, ['==', ['get', 'code'], code ?? ''] as never)
     }
   },
 )
@@ -282,6 +293,7 @@ watch(mode, (value) => {
   ] as never)
   instance.setPaintProperty(LINE, 'line-color', CHROME[value].surface)
   instance.setPaintProperty(SELECTED, 'line-color', CHROME[value].primary)
+  applyTipTheme(instance)
 })
 
 /**
@@ -292,6 +304,23 @@ watch(mode, (value) => {
  * current container instead of hard-coding a level that would be wrong at
  * another viewport size.
  */
+/**
+ * Push the palette into CSS variables on the map container.
+ *
+ * MapLibre's stylesheet hard-codes `background: #fff` on the popup body and
+ * `#fff` on all eight tip variants, and the text colour is inherited - which in
+ * dark mode meant white text on a white popup. Popups are appended to the map
+ * container, so variables set here reach them.
+ */
+function applyTipTheme(instance: MapLibreMap) {
+  const chrome = CHROME[mode.value]
+  const el = instance.getContainer()
+  el.style.setProperty('--apt-tip-bg', chrome.surface)
+  el.style.setProperty('--apt-tip-fg', chrome.primary)
+  el.style.setProperty('--apt-tip-muted', chrome.secondary)
+  el.style.setProperty('--apt-tip-border', chrome.border)
+}
+
 function applyMinZoom(instance: MapLibreMap) {
   const camera = instance.cameraForBounds(BOUNDS, { padding: FIT_PADDING })
   if (camera?.zoom === undefined) return
@@ -349,10 +378,41 @@ defineExpose({ resetView })
   flex-direction: column;
   gap: 2px;
   font: 12px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--apt-tip-fg, #0b0b0b);
+}
+
+.map-tip span {
+  color: var(--apt-tip-muted, #52514e);
 }
 
 .maplibregl-popup-content {
   padding: 8px 10px;
   border-radius: 6px;
+  background: var(--apt-tip-bg, #fcfcfb);
+  color: var(--apt-tip-fg, #0b0b0b);
+  border: 1px solid var(--apt-tip-border, rgba(11, 11, 11, 0.1));
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+}
+
+/* The tip is drawn with borders, so each anchor direction needs its own side
+   recoloured to match the popup background. */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--apt-tip-bg, #fcfcfb);
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--apt-tip-bg, #fcfcfb);
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--apt-tip-bg, #fcfcfb);
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--apt-tip-bg, #fcfcfb);
 }
 </style>

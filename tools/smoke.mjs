@@ -125,10 +125,114 @@ const sideBySide = await page.evaluate(() => {
 check(sideBySide.overlap > 100, 'map and chart share one view (side by side)',
   `overlap=${Math.round(sideBySide.overlap)}`)
 
+// Controls must not truncate their own labels.
+const clipped = await page.evaluate(() =>
+  [...document.querySelectorAll('.v-select__selection-text')]
+    .map((e) => ({ text: e.textContent.trim(), clipped: e.scrollWidth > e.clientWidth + 1 }))
+    .filter((x) => x.clipped),
+)
+check(clipped.length === 0, 'no select label is truncated', JSON.stringify(clipped))
+
+// The hint belongs with the map it describes.
+const hint = await page.evaluate(() => {
+  const map = document.querySelector('.map-card').getBoundingClientRect()
+  const el = [...document.querySelectorAll('.text-caption')].find((e) =>
+    /anklicken|Click a region/.test(e.textContent),
+  )
+  if (!el) return null
+  const b = el.getBoundingClientRect()
+  return { gap: Math.round(b.top - map.bottom), aligned: Math.abs(b.left - map.left) < 6 }
+})
+check(hint !== null && hint.gap >= 0 && hint.gap < 40 && hint.aligned,
+  'hint sits directly below the map', JSON.stringify(hint))
+
+// Hover tooltip: readable in the active theme, and unit-correct per metric.
+async function tooltip() {
+  // The zoom checks above leave the camera zoomed in, which would put the hover
+  // point off-canvas; reset so the helper is self-contained.
+  await page.evaluate(() =>
+    window.__aptMap.fitBounds([[9.3, 46.2], [17.4, 49.2]], { padding: 24, duration: 0 }),
+  )
+  await page.waitForTimeout(700)
+  const box = await page.locator('.map-canvas').boundingBox()
+  const pt = await page.evaluate(() => {
+    const q = window.__aptMap.project([14.3, 48.05])
+    return { x: q.x, y: q.y }
+  })
+  await page.mouse.move(box.x + pt.x, box.y + pt.y)
+  await page.waitForTimeout(900)
+  return page.evaluate(() => {
+    const el = document.querySelector('.maplibregl-popup-content')
+    const inner = document.querySelector('.map-tip')
+    if (!el || !inner) return null
+    const parse = (c) => c.match(/\d+/g).slice(0, 3).map(Number)
+    const lum = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b
+    const bg = parse(getComputedStyle(el).backgroundColor)
+    const fg = parse(getComputedStyle(inner).color)
+    return { text: inner.textContent.replace(/\s+/g, ' ').trim(), delta: Math.abs(lum(bg) - lum(fg)) }
+  })
+}
+
+const tipLight = await tooltip()
+check((tipLight?.delta ?? 0) > 100, 'tooltip readable in light mode', `luminance delta ${Math.round(tipLight?.delta ?? 0)}`)
+check(/%/.test(tipLight?.text ?? ''), 'percent metric tooltip carries %', tipLight?.text)
+
+await page.locator('button[aria-label="Darstellung"], button[aria-label="Appearance"]').first().click()
+await page.waitForTimeout(1600)
+const tipDark = await tooltip()
+check((tipDark?.delta ?? 0) > 100, 'tooltip readable in dark mode', `luminance delta ${Math.round(tipDark?.delta ?? 0)}`)
+await page.locator('button[aria-label="Darstellung"], button[aria-label="Appearance"]').first().click()
+await page.waitForTimeout(1400)
+
+// Absolute change is a head count and must lose the percent sign.
+await page.locator('.v-select').first().click()
+await page.waitForTimeout(600)
+await page.getByRole('option', { name: 'Absolute Veränderung' }).click()
+await page.waitForTimeout(1800)
+const tipAbs = await tooltip()
+check(!/%/.test(tipAbs?.text ?? ''), 'absolute metric tooltip has no %', tipAbs?.text)
+await page.locator('.v-select').first().click()
+await page.waitForTimeout(600)
+await page.getByRole('option', { name: 'Jährliche Wachstumsrate' }).click()
+await page.waitForTimeout(1400)
+
 // List page
 await page.goto(BASE + '#/list', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(2500)
 check((await page.locator('tbody tr').count()) > 0, 'list renders rows')
+
+// Jumping from a Gemeinde in the list to the map used to break the map outright:
+// it asked for municipality geometry that does not exist, so nothing rendered and
+// clicks stopped working.
+await page.locator('.v-select').first().click()
+await page.waitForTimeout(600)
+await page.getByRole('option', { name: 'Gemeinden' }).click()
+await page.waitForTimeout(3500)
+await page.locator('tbody tr').first().click()
+await page.waitForTimeout(4500)
+const handoff = await page.evaluate(() => {
+  const m = window.__aptMap
+  return {
+    rendered: m ? m.queryRenderedFeatures({ layers: ['regions-fill'] }).length : 0,
+    highlight: m ? JSON.stringify(m.getFilter('regions-selected')) : '',
+    name: document.querySelector('.region-name')?.textContent?.trim(),
+    rows: document.querySelectorAll('.detail-table tbody tr').length,
+  }
+})
+check(handoff.rendered > 100, 'map still renders after a Gemeinde handoff', `${handoff.rendered}`)
+check(!/"code"\],""\]/.test(handoff.highlight), 'containing district is outlined', handoff.highlight)
+check(handoff.rows === 10, 'Gemeinde detail table populated', `${handoff.rows}`)
+
+// ... and the map must remain clickable afterwards.
+const box2 = await page.locator('.map-canvas').boundingBox()
+const pt2 = await page.evaluate(() => {
+  const q = window.__aptMap.project([16.37, 48.21])
+  return { x: q.x, y: q.y }
+})
+await page.mouse.click(box2.x + pt2.x, box2.y + pt2.y)
+await page.waitForTimeout(1600)
+const afterClick = await page.evaluate(() => document.querySelector('.region-name')?.textContent?.trim())
+check(afterClick !== handoff.name, 'map clicks still work after handoff', `${afterClick}`)
 
 // About page must span the full width, not a narrow column.
 await page.goto(BASE + '#/about', { waitUntil: 'domcontentloaded' })
