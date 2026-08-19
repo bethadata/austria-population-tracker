@@ -145,6 +145,28 @@ const ticks = await page.evaluate(() => {
 check(ticks.count >= 3, 'quarterly axis is labelled', `${ticks.count} ticks`)
 check(ticks.overlaps === 0, 'quarterly tick labels do not overlap',
   `${ticks.overlaps} overlapping of ${ticks.count}: ${ticks.labels.join(',')}`)
+
+// Quarterly is the tallest the chart card gets (its note wraps to two lines), so
+// it is the case that used to overflow the row and be clipped by the table card.
+const clipping = await page.evaluate(() => {
+  const card = document.querySelector('.chart-card').getBoundingClientRect()
+  const plot = document.querySelector('.js-plotly-plot').getBoundingClientRect()
+  const mapCard = document.querySelector('.map-card').getBoundingClientRect()
+  const canvas = document.querySelector('.map-canvas').getBoundingClientRect()
+  const table = document.querySelector('.detail-table').closest('.v-card').getBoundingClientRect()
+  const note = [...document.querySelectorAll('.chart-card .text-caption')].at(-1)?.getBoundingClientRect()
+  return {
+    plotOver: Math.round(plot.bottom - card.bottom),
+    noteOver: note ? Math.round(note.bottom - card.bottom) : 0,
+    mapOver: Math.round(canvas.bottom - mapCard.bottom),
+    tableOverlap: Math.round(Math.max(card.bottom, mapCard.bottom) - table.top),
+  }
+})
+check(clipping.plotOver <= 0, 'chart plot not clipped by its card', `${clipping.plotOver}px over`)
+check(clipping.noteOver <= 0, 'chart note not clipped by its card', `${clipping.noteOver}px over`)
+check(clipping.mapOver <= 1, 'map canvas not clipped by its card', `${clipping.mapOver}px over`)
+check(clipping.tableOverlap <= 0, 'table card does not cover the row above',
+  `${clipping.tableOverlap}px overlap`)
 await page.getByRole('button', { name: 'Jährlich' }).click()
 await page.waitForTimeout(1400)
 

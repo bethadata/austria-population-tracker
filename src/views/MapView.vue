@@ -157,15 +157,14 @@ watch(
 }
 
 @media (min-width: 1280px) {
-  /* One shared height for the row, sized to the chart rather than to the
-     viewport - the map only needs about a third of its width in height, so
-     stretching it further just adds empty space above and below Austria. */
+  /* No fixed row height. Pinning it to a viewport fraction meant that on shorter
+     windows the row was smaller than the chart card needed, and overflow: hidden
+     clipped the bottom of the plot where the table card began. The row now takes
+     its height from the chart's own content and the map matches it exactly, so
+     neither card can ever be cut off. */
   .content-row {
-    height: clamp(300px, 38vh, 470px);
-    /* Vuetify's .v-row wraps by default, which makes the single flex line's
-       cross size content-driven, so align-items: stretch would never cap the
-       columns to the row height. nowrap is what actually constrains them. */
     flex-wrap: nowrap;
+    align-items: stretch;
   }
 
   .map-column,
@@ -178,17 +177,16 @@ watch(
   /* The map takes the column's leftover height; the hint keeps its own. */
   .map-card {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 280px;
+    max-height: 460px;
   }
 
   .chart-card {
-    height: 100%;
-    overflow: hidden;
+    flex: 1 1 auto;
   }
 }
 
 .map-card {
-  min-height: 300px;
   overflow: hidden;
 }
 
