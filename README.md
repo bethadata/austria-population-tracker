@@ -55,6 +55,19 @@ npm run data:validate  # re-run validation on the current data
 npm run data:geo       # rebuild boundary geometry (rarely needed)
 ```
 
+### Browser tests
+
+```bash
+npm run build
+npm run preview          # serves on :4174
+npm run test:smoke       # functional assertions, exits non-zero on failure
+npm run test:inspect     # console/network sweep + screenshots per route
+```
+
+`test:smoke` asserts the paths that fail *silently* — most importantly that
+MapLibre's GeoJSON source actually loaded, since a dead worker leaves the map
+blank with nothing in the console.
+
 ---
 
 ## Data
@@ -115,6 +128,25 @@ values exactly for all other districts in every year, and the corrections are re
 `manifest.json`. Totals are never modified — they are confirmed correct against the OGD API.
 
 ---
+
+## Notes for maintainers
+
+### MapLibre's worker must be imported explicitly
+
+MapLibre derives its worker URL from `import.meta.url` of its own bundle,
+expecting `./maplibre-gl-worker.mjs` beside it. After bundling that file does not
+exist, so the request falls through to the SPA fallback, the module worker is
+handed `index.html`, and it dies parsing HTML. MapLibre swallows worker failures,
+so the only symptom is that every GeoJSON source hangs forever — a blank map with
+an empty console.
+
+The fix is in [`RegionMap.vue`](src/components/RegionMap.vue): import the worker
+through Vite (`?worker&url`) so it is emitted as a real asset with its
+shared-chunk import intact, and hand the URL to `setWorkerUrl()`. This also
+requires `worker: { format: 'es' }` in [`vite.config.ts`](vite.config.ts), since
+Vite's default `iife` worker format cannot carry the worker's own `import`.
+
+If the map ever goes blank after a dependency bump, check this first.
 
 ## Project Structure
 

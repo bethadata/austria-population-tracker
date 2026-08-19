@@ -74,7 +74,11 @@ export const CHROME: Record<Mode, Record<string, string>> = {
  * without its own value moving. Fixed breaks keep colour meaning stable across
  * every view, and the bands match the real spread of Austrian regional growth.
  */
-export const BREAKS = [-1.5, -0.75, -0.25, 0.25, 0.75, 1.5]
+// Eight breaks for nine colour classes (four per arm plus the neutral band).
+// The +/-0.15 %/yr centre band is what reads as 'flat'; the outer bounds sit
+// just past the real spread of Austrian regional growth so the strongest
+// colours stay reachable without clipping a large share of regions.
+export const BREAKS = [-2, -1, -0.5, -0.15, 0.15, 0.5, 1, 2]
 
 /** Build MapLibre `step` expression stops: [color, stop, color, stop, ...]. */
 export function divergingStops(mode: Mode): (string | number)[] {

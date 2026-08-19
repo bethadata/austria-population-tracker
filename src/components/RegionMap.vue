@@ -4,11 +4,20 @@ import {
   Map as MapLibreMap,
   NavigationControl,
   Popup,
+  setWorkerUrl,
   type GeoJSONSource,
   type MapLayerMouseEvent,
   type StyleSpecification,
 } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// MapLibre derives its worker URL from `import.meta.url` of its own bundle,
+// expecting `./maplibre-gl-worker.mjs` to sit beside it. After bundling that
+// file does not exist, so the request hits the SPA fallback, the module worker
+// is handed index.html, and it dies parsing HTML. MapLibre swallows worker
+// failures, so the only visible symptom is that every GeoJSON source hangs
+// forever with no error. Importing the worker through Vite emits it as a real
+// asset - with its shared-chunk import intact - and hands us the hashed URL.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -17,6 +26,8 @@ import { usePopulationStore } from '@/stores/population'
 import type { Level } from '@/types/data'
 import { formatNumber, formatPercent } from '@/utils/format'
 import { CHROME, divergingStops } from '@/utils/palette'
+
+setWorkerUrl(maplibreWorkerUrl)
 
 const store = usePopulationStore()
 const { mode } = useAppTheme()
@@ -71,7 +82,10 @@ const decorated = computed<GeoJSON.FeatureCollection | null>(() => {
         id: code,
         properties: {
           code,
-          value: value ?? null,
+          // Omitted rather than null when unavailable: MapLibre expressions
+          // test presence with `has`, and comparing against a null literal is
+          // not reliably supported.
+          ...(typeof value === 'number' && Number.isFinite(value) ? { value } : {}),
           name: locale.value === 'en' ? region?.name_en : region?.name_de,
         },
       }
@@ -98,9 +112,9 @@ function addLayers() {
       // through to the neutral surface rather than to an arbitrary ramp end.
       'fill-color': [
         'case',
-        ['==', ['get', 'value'], null],
-        CHROME[mode.value].grid,
+        ['has', 'value'],
         ['step', ['get', 'value'], ...divergingStops(mode.value)],
+        CHROME[mode.value].grid,
       ] as never,
       'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0.9] as never,
     },
@@ -203,10 +217,17 @@ onMounted(async () => {
     new AttributionControl({ compact: true, customAttribution: '© Statistik Austria' }),
   )
 
+  // Surface MapLibre's own diagnostics: it swallows listener exceptions into an
+  // 'error' event, so without this a bad paint expression fails silently.
+  instance.on('error', (event) => {
+    console.error('[maplibre]', event.error?.message ?? event)
+  })
+
   instance.on('load', () => {
     map.value = instance
     addLayers()
     bindInteractions()
+    ;(window as unknown as { __aptMap?: unknown }).__aptMap = instance
   })
 })
 
@@ -248,9 +269,9 @@ watch(mode, (value) => {
   instance.setPaintProperty('bg', 'background-color', CHROME[value].plane)
   instance.setPaintProperty(FILL, 'fill-color', [
     'case',
-    ['==', ['get', 'value'], null],
-    CHROME[value].grid,
+    ['has', 'value'],
     ['step', ['get', 'value'], ...divergingStops(value)],
+    CHROME[value].grid,
   ] as never)
   instance.setPaintProperty(LINE, 'line-color', CHROME[value].surface)
   instance.setPaintProperty(SELECTED, 'line-color', CHROME[value].primary)

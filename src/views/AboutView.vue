@@ -18,9 +18,9 @@ const generated = computed(() =>
 </script>
 
 <template>
-  <v-container>
-    <v-row justify="center">
-      <v-col cols="12" md="9" lg="7">
+  <v-container fluid class="pa-4">
+    <v-row>
+      <v-col cols="12">
         <!-- ABOUT -->
         <v-card class="ps-4 mb-4" elevation="2">
           <v-card-title>{{ t('about_page.about.title') }}</v-card-title>

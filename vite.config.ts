@@ -11,6 +11,9 @@ const BASE = '/austria-population-tracker/'
 export default defineConfig({
   base: BASE,
   plugins: [vue(), vuetify({ autoImport: true })],
+  // MapLibre spawns a module worker. Vite's default worker format is iife,
+  // which cannot carry the worker's own `import` of MapLibre's shared chunk.
+  worker: { format: 'es' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

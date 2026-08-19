@@ -7,11 +7,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port 4174",
     "typecheck": "vue-tsc --noEmit",
     "data": "python pipeline/update.py",
     "data:validate": "python pipeline/validate.py",
-    "data:geo": "python pipeline/build_geo.py"
+    "data:geo": "python pipeline/build_geo.py",
+    "test:smoke": "node tools/smoke.mjs",
+    "test:inspect": "node tools/inspect.mjs"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -24,6 +26,7 @@
     "vuetify": "^4.1.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
     "@types/plotly.js-basic-dist-min": "^2.12.4",
     "@vitejs/plugin-vue": "^6.0.8",

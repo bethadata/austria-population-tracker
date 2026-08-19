@@ -133,6 +133,11 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
       tickcolor: chrome.axis,
       tickfont: { color: chrome.muted },
       automargin: true,
+      // 67 quarters labelled individually turns the axis into a wall of rotated
+      // text. Label one per year and let the tooltip carry the exact quarter.
+      ...(isQuarterly.value
+        ? { tickmode: 'linear' as const, tick0: 0, dtick: 4, tickangle: 0 }
+        : {}),
     },
     yaxis: {
       title: { text: yTitle.value, font: { color: chrome.secondary } },
@@ -178,17 +183,33 @@ async function render() {
   await Plotly.react(container.value, traces, layout(shapes), CONFIG)
 }
 
-onMounted(render)
+onMounted(async () => {
+  if (props.frequency === 'quarterly') await store.ensureQuarterly()
+  await render()
+})
+
+watch(
+  () => props.frequency,
+  async (value) => {
+    if (value === 'quarterly') await store.ensureQuarterly()
+  },
+  { immediate: true },
+)
 onBeforeUnmount(() => {
   if (container.value) Plotly.purge(container.value)
 })
 
+// store.quarterly is in the list because it arrives asynchronously: switching to
+// quarterly kicks off a fetch, and without a dependency on the loaded payload the
+// chart would render once against an empty series and never recover.
 watch(
   [
     () => store.selected,
     () => props.view,
     () => props.frequency,
     () => props.byCitizenship,
+    () => store.quarterly,
+    () => store.annual,
     mode,
     locale,
   ],

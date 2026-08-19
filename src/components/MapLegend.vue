@@ -11,12 +11,28 @@ const { t, locale } = useI18n()
 
 const bands = computed(() => legendBands(mode.value))
 
-/** Only interior breaks get a printed number; the open ends read as < and >. */
-function tick(band: { from: number | null; to: number | null }): string {
-  if (band.from === null) return `< ${formatNumber(band.to, locale.value, 2)}`
-  if (band.to === null) return `> ${formatNumber(band.from, locale.value, 2)}`
-  return ''
+/** Full range for each swatch, shown on hover so the ramp stays uncluttered. */
+function swatchTitle(band: { from: number | null; to: number | null }): string {
+  const unit = t('map.legend_unit')
+  if (band.from === null) return `< ${formatNumber(band.to, locale.value, 2)} ${unit}`
+  if (band.to === null) return `> ${formatNumber(band.from, locale.value, 2)} ${unit}`
+  return `${formatNumber(band.from, locale.value, 2)} … ${formatNumber(band.to, locale.value, 2)} ${unit}`
 }
+
+/**
+ * Selective ticks, not one per break. Printing all eight collided with the
+ * end labels and turned the ramp into a wall of digits; the exact band of any
+ * swatch is available on hover, and per-region values in the map tooltip.
+ * The extremes carry words rather than numbers because those bands are
+ * open-ended anyway.
+ */
+const ticks = computed(() => [
+  t('map.shrinking'),
+  formatNumber(-1, locale.value, 2),
+  '0',
+  formatNumber(1, locale.value, 2),
+  t('map.growing'),
+])
 </script>
 
 <template>
@@ -31,18 +47,12 @@ function tick(band: { from: number | null; to: number | null }): string {
         :key="band.color"
         class="legend-swatch"
         :style="{ backgroundColor: band.color }"
-        :title="tick(band)"
+        :title="swatchTitle(band)"
       />
     </div>
 
     <div class="legend-axis text-medium-emphasis">
-      <span>{{ t('map.shrinking') }}</span>
-      <span
-        v-for="band in bands.slice(0, -1)"
-        :key="`t-${band.color}`"
-        class="legend-tick"
-      >{{ band.to !== null ? formatNumber(band.to, locale, 2) : '' }}</span>
-      <span>{{ t('map.growing') }}</span>
+      <span v-for="(label, i) in ticks" :key="i">{{ label }}</span>
     </div>
   </div>
 </template>
@@ -78,12 +88,9 @@ function tick(band: { from: number | null; to: number | null }): string {
 .legend-axis {
   display: flex;
   justify-content: space-between;
+  gap: 6px;
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
-}
-
-.legend-tick {
-  flex: 1 1 0;
-  text-align: right;
+  white-space: nowrap;
 }
 </style>
