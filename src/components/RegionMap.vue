@@ -20,6 +20,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 
 import { useAppTheme } from '@/composables/useTheme'
 import { usePopulationStore } from '@/stores/population'
@@ -34,6 +35,7 @@ const store = usePopulationStore()
 const { mode } = useAppTheme()
 const { t, locale } = useI18n()
 const { metricLabel, isPercent } = useMetricLabel()
+const display = useDisplay()
 
 const container = ref<HTMLDivElement | null>(null)
 const map = shallowRef<MapLibreMap | null>(null)
@@ -223,6 +225,15 @@ onMounted(async () => {
     bounds: BOUNDS,
     fitBoundsOptions: { padding: FIT_PADDING },
     attributionControl: false,
+    // On a phone the map sits mid-page, and a one-finger drag inside it would
+    // pan the map rather than scroll the page - leaving the reader stuck. This
+    // asks for two fingers instead, with an on-canvas hint.
+    cooperativeGestures: display.smAndDown.value,
+    // Nothing here benefits from a tilted or rotated camera, and both are easy
+    // to trigger by accident with two fingers.
+    dragRotate: false,
+    pitchWithRotate: false,
+    touchPitch: false,
   })
   instance.addControl(new NavigationControl({ showCompass: false }), 'top-right')
   instance.addControl(
@@ -279,6 +290,13 @@ watch(
     }
   },
 )
+
+watch(display.smAndDown, (small) => {
+  const handler = map.value?.cooperativeGestures
+  if (!handler) return
+  if (small) handler.enable()
+  else handler.disable()
+})
 
 // Theme is a full repaint: background, fills and strokes all move together.
 watch(mode, (value) => {
@@ -357,7 +375,9 @@ defineExpose({ resetView })
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 380px;
+  /* Deliberately small: the card decides the height (from its width on narrow
+     screens), and a large min-height here would silently override it. */
+  min-height: 180px;
 }
 
 .map-canvas {

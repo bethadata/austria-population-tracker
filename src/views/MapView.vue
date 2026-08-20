@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 
 import MapLegend from '@/components/MapLegend.vue'
 import PopulationChart from '@/components/PopulationChart.vue'
@@ -12,7 +13,12 @@ import type { Level, Metric, Window } from '@/types/data'
 
 const store = usePopulationStore()
 const { t } = useI18n()
-const { windowLabel } = useMetricLabel()
+const { windowLabel, fullLabel } = useMetricLabel()
+const display = useDisplay()
+
+// Stacked vertically, the four filters fill most of a phone screen before any
+// data appears, so they start collapsed behind a summary line there.
+const filtersOpen = ref(!display.smAndDown.value)
 
 // Only these two levels have boundary geometry; everything else is list-only.
 const MAP_LEVELS: Level[] = ['nuts2', 'district']
@@ -45,41 +51,67 @@ watch(
 
 <template>
   <v-container fluid class="pa-4 map-page">
-    <!-- Filters in one row above everything, never interleaved with the views. -->
+    <!-- Filters in one row above everything, never interleaved with the views.
+         On a phone they collapse behind a summary line: stacked, they filled
+         most of the screen and pushed the map below the fold. -->
     <v-card flat border class="mb-3 flex-shrink-0">
-      <v-card-text class="d-flex flex-wrap ga-4 align-center py-3">
-        <v-btn-toggle v-model="store.mapLevel" density="compact" variant="outlined" divided mandatory>
-          <v-btn v-for="lvl in MAP_LEVELS" :key="lvl" :value="lvl" size="small">
-            {{ t(`levels.${lvl}`) }}
-          </v-btn>
-        </v-btn-toggle>
-
-        <v-select
-          v-model="store.metric"
-          :items="METRICS.map((m) => ({ title: t(`metric.${m}`), value: m }))"
-          :label="t('metric.label')"
-          density="compact"
-          variant="outlined"
-          hide-details
-          style="min-width: 265px"
-        />
-
-        <v-select
-          v-model="store.window"
-          :items="WINDOWS.map((w) => ({ title: windowLabel(w), value: w }))"
-          :label="t('metric.window')"
-          density="compact"
-          variant="outlined"
-          hide-details
-          style="max-width: 165px"
-        />
-
-        <v-spacer />
-
-        <div style="min-width: 250px; max-width: 330px; flex: 1 1 250px">
-          <MapLegend />
-        </div>
+      <v-card-text v-if="display.smAndDown.value" class="py-1 px-2">
+        <v-btn
+          variant="text"
+          block
+          class="justify-space-between"
+          :append-icon="filtersOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+          @click="filtersOpen = !filtersOpen"
+        >
+          <span class="text-truncate text-body-2">
+            {{ t(`levels.${store.mapLevel}`) }} · {{ fullLabel }}
+          </span>
+        </v-btn>
       </v-card-text>
+
+      <v-expand-transition>
+        <div v-show="filtersOpen">
+          <v-card-text class="d-flex flex-wrap ga-4 align-center py-3">
+            <v-btn-toggle
+              v-model="store.mapLevel"
+              :density="display.smAndDown.value ? 'default' : 'compact'"
+              variant="outlined"
+              divided
+              mandatory
+            >
+              <v-btn v-for="lvl in MAP_LEVELS" :key="lvl" :value="lvl" size="small">
+                {{ t(`levels.${lvl}`) }}
+              </v-btn>
+            </v-btn-toggle>
+
+            <v-select
+              v-model="store.metric"
+              :items="METRICS.map((m) => ({ title: t(`metric.${m}`), value: m }))"
+              :label="t('metric.label')"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="min-width: 265px"
+            />
+
+            <v-select
+              v-model="store.window"
+              :items="WINDOWS.map((w) => ({ title: windowLabel(w), value: w }))"
+              :label="t('metric.window')"
+              density="compact"
+              variant="outlined"
+              hide-details
+              style="max-width: 165px"
+            />
+
+            <v-spacer />
+
+            <div style="min-width: 250px; max-width: 330px; flex: 1 1 250px">
+              <MapLegend />
+            </div>
+          </v-card-text>
+        </div>
+      </v-expand-transition>
     </v-card>
 
     <!-- Row one: map and time series beside each other. Row two: the year table
@@ -106,7 +138,7 @@ watch(
                 density="compact"
                 variant="outlined"
                 hide-details
-                style="max-width: 190px"
+                :style="display.smAndDown.value ? 'max-width: 168px' : 'max-width: 190px'"
               />
 
               <v-btn-toggle
@@ -191,8 +223,15 @@ watch(
 }
 
 @media (max-width: 1279px) {
+  /* Austria projects to roughly 1.94:1 on screen, so a fixed height wasted most
+     of a phone card. Sizing from the width keeps the country large relative to
+     its card; the ratio is a little taller than 1.94 to leave room for the
+     fit padding and the zoom control. */
   .map-card {
-    height: 420px;
+    height: auto;
+    aspect-ratio: 1.6;
+    min-height: 200px;
+    max-height: 460px;
   }
 
   .chart-column {

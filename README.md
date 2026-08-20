@@ -18,6 +18,7 @@ fast each region is growing or shrinking.
 - **Searchable, sortable list** — all 2 256 regions down to municipality level, ranked by fastest growing / shrinking / largest
 - **Bilingual** — German and English, with a persisted preference
 - **Light and dark themes** — both selected and validated, not an automatic flip
+- **Mobile aware** — filters collapse behind a summary line, the map is sized from its width, the year table flips to years-down-the-rows, and both map and chart release one-finger gestures so the page stays scrollable
 - **Static deployment** — runs entirely in the browser, no server and no API keys
 
 ---
@@ -62,12 +63,19 @@ npm run data:geo       # rebuild boundary geometry (rarely needed)
 npm run build
 npm run preview          # serves on :4174
 npm run test:smoke       # functional assertions, exits non-zero on failure
+npm run test:mobile      # phone profiles with touch emulation
 npm run test:inspect     # console/network sweep + screenshots per route
 ```
 
 `test:smoke` asserts the paths that fail *silently* — most importantly that
 MapLibre's GeoJSON source actually loaded, since a dead worker leaves the map
 blank with nothing in the console.
+
+`test:mobile` is separate because it needs real device emulation (touch, DPR,
+mobile user agent) rather than just a narrow window. It covers the things that
+only break on a phone: the whole map being visible on the first screen, the map
+not being mostly empty space, two-finger panning so the page stays scrollable,
+and the year table needing no sideways scrolling.
 
 ---
 
@@ -144,6 +152,18 @@ never loaded, and the map went blank *and* stopped responding to clicks.
 When a selection has no polygon of its own, `mapHighlight` walks up the hierarchy
 and outlines the mapped region containing it, so the selection is still located on
 screen while the chart and detail panel describe the Gemeinde.
+
+### Touch gestures must be released deliberately
+
+Both the map and the chart capture drag gestures by default. Mid-page on a phone
+that means a vertical swipe pans the map or the plot instead of scrolling, and
+the reader gets stuck. The map sets `cooperativeGestures` below the `sm`
+breakpoint (two fingers to pan, with an on-canvas hint) and the chart sets
+`dragmode: false` with `scrollZoom: false` and no mode bar.
+
+Also note `.map-wrap` in `RegionMap.vue` keeps a deliberately small
+`min-height`: the card decides the map's height, and a large min-height there
+silently overrides the width-derived sizing on narrow screens.
 
 ### MapLibre's worker must be imported explicitly
 

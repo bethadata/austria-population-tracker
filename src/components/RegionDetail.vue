@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 
 import { useMetricLabel } from '@/composables/useMetricLabel'
 import { usePopulationStore } from '@/stores/population'
@@ -13,6 +14,17 @@ const YEARS = 10
 const store = usePopulationStore()
 const { t, locale } = useI18n()
 const { fullLabel, isPercent } = useMetricLabel()
+const display = useDisplay()
+
+/**
+ * Orientation follows the available width.
+ *
+ * Years across the columns suits a wide full-width row, but on a phone it means
+ * ~860px of horizontal swiping. Narrow screens get years down the rows instead,
+ * newest first, so the newest figures are on top and scrolling is vertical -
+ * which is the direction a phone scrolls anyway.
+ */
+const yearsAcross = computed(() => !display.smAndDown.value)
 
 const region = computed(() => store.selectedRegion)
 const displayName = computed(() =>
@@ -94,7 +106,10 @@ const measures = computed(() => [
   <v-card flat border>
     <!-- Wide header: identity on the left, the map's own indicator beside it, so
          the panel and the map can never appear to describe different things. -->
-    <div class="d-flex flex-wrap align-center ga-8 px-4 pt-3 pb-2">
+    <div
+      class="d-flex flex-wrap align-center px-4 pt-3 pb-2"
+      :class="display.smAndDown.value ? 'ga-3' : 'ga-8'"
+    >
       <div class="d-flex align-baseline ga-2 flex-wrap">
         <span class="region-name text-h6">{{ displayName || t('detail.no_selection') }}</span>
         <span v-if="region" class="text-caption text-medium-emphasis">
@@ -123,11 +138,9 @@ const measures = computed(() => [
       {{ t('detail.last_years', { n: YEARS }) }}
     </div>
 
-    <!-- Years run across the columns so the table is short and wide, which is
-         what a full-width row wants. It scrolls in its own box rather than
-         making the page scroll sideways. -->
+    <!-- Two orientations of the same ten years; see `yearsAcross`. -->
     <div class="table-scroll">
-      <table class="detail-table">
+      <table v-if="yearsAcross" class="detail-table">
         <thead>
           <tr>
             <th class="row-label">{{ t('detail.year') }}</th>
@@ -143,7 +156,27 @@ const measures = computed(() => [
           </tr>
         </tbody>
       </table>
+
+      <table v-else class="detail-table">
+        <thead>
+          <tr>
+            <th class="row-label">{{ t('detail.year') }}</th>
+            <th v-for="measure in measures" :key="measure.key" class="tabular">
+              {{ measure.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="col in [...columns].reverse()" :key="col.year">
+            <th scope="row" class="row-label tabular">{{ col.year }}</th>
+            <td v-for="measure in measures" :key="measure.key" class="tabular">
+              {{ measure.value(col) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
   </v-card>
 </template>
 
@@ -200,5 +233,23 @@ const measures = computed(() => [
    inherently bad, and the explicit signs already carry direction. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Four columns of six-figure numbers do not fit 320px at the default metrics,
+   so the narrowest screens get tighter cells rather than sideways scrolling. */
+@media (max-width: 400px) {
+  .detail-table th,
+  .detail-table td {
+    padding: 6px 4px;
+    font-size: 0.72rem;
+  }
+
+  .detail-table thead th {
+    font-size: 0.66rem;
+  }
+
+  .table-scroll {
+    padding-inline: 8px;
+  }
 }
 </style>

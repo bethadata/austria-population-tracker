@@ -13,7 +13,8 @@
     "data:validate": "python pipeline/validate.py",
     "data:geo": "python pipeline/build_geo.py",
     "test:smoke": "node tools/smoke.mjs",
-    "test:inspect": "node tools/inspect.mjs"
+    "test:inspect": "node tools/inspect.mjs",
+    "test:mobile": "node tools/mobile-check.mjs"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

@@ -5,6 +5,7 @@
 import Plotly from 'plotly.js-basic-dist-min'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 
 import { useAppTheme } from '@/composables/useTheme'
 import { usePopulationStore } from '@/stores/population'
@@ -29,6 +30,7 @@ const props = withDefaults(
 const store = usePopulationStore()
 const { mode } = useAppTheme()
 const { t, locale } = useI18n()
+const display = useDisplay()
 
 const container = ref<HTMLDivElement | null>(null)
 
@@ -162,6 +164,7 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
       x: 0,
       font: { color: chrome.secondary },
     },
+    dragmode: display.smAndDown.value ? false : 'zoom',
     hovermode: 'x unified',
     hoverlabel: {
       bgcolor: chrome.surface,
@@ -200,16 +203,23 @@ function quarterlyTicks(): Partial<Plotly.LayoutAxis> {
   }
 }
 
-const CONFIG: Partial<Plotly.Config> = {
-  displaylogo: false,
-  responsive: true,
-  modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+function chartConfig(): Partial<Plotly.Config> {
+  const small = display.smAndDown.value
+  return {
+    displaylogo: false,
+    responsive: true,
+    // The mode bar is a row of small targets that is unusable by thumb, and
+    // scroll-zoom would hijack the page scroll.
+    displayModeBar: !small,
+    scrollZoom: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+  }
 }
 
 async function render() {
   if (!container.value) return
   const { traces, shapes } = buildTraces()
-  await Plotly.react(container.value, traces, layout(shapes), CONFIG)
+  await Plotly.react(container.value, traces, layout(shapes), chartConfig())
 }
 
 let resizeObserver: ResizeObserver | null = null
@@ -255,6 +265,7 @@ watch(
     () => store.quarterly,
     () => store.annual,
     () => props.height,
+    display.smAndDown,
     mode,
     locale,
   ],
