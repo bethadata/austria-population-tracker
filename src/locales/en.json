@@ -62,7 +62,9 @@
     "provisional_note": "The most recent quarters are provisional results, calculated under a different methodology (a 90-day minimum residence requirement).",
     "population": "Population",
     "no_data": "No data available",
-    "citizenship_short": "By citizenship"
+    "citizenship_short": "By citizenship",
+    "reference_annual": "Reference date: 1 January of the year shown.",
+    "reference_quarterly": "Reference date: the first day of each quarter (1 Jan, 1 Apr, 1 Jul, 1 Oct), not a quarterly average."
   },
   "detail": {
     "map_indicator": "Map indicator",
@@ -71,7 +73,9 @@
     "population": "Population",
     "change_abs": "Δ people",
     "change_rel": "Δ %",
-    "no_selection": "No region selected"
+    "no_selection": "No region selected",
+    "as_of": "as of {date}",
+    "table_reference": "each as of 1 January"
   },
   "map": {
     "title": "Map",
@@ -114,6 +118,7 @@
     "data": {
       "title": "Data sources",
       "source_text": "Two Statistik Austria time series underpin this site: population at the beginning of each year by administrative unit (since 2002), and population at the beginning of each quarter by Bundesland and citizenship (since 2010). Administrative boundary geometries also come from Statistik Austria.",
+      "reference_text": "All figures are stocks measured on a single reference date rather than annual averages: the annual series refers to 1 January, the quarterly series to the first day of each quarter (1 Jan, 1 Apr, 1 Jul, 1 Oct).",
       "licence_text": "The data is published under the {link} licence.",
       "licence_link": "Creative Commons Attribution 4.0 International",
       "validation_text": "Every update is checked automatically: totals must reconcile across all levels, and district figures are additionally cross-checked against Statistik Austria's OGD API.",

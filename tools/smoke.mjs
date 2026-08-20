@@ -129,6 +129,54 @@ const stacked = await page.evaluate(() => {
 check(stacked.below, 'year table sits below the map and chart')
 check(stacked.mapHeight < 520, 'map is not stretched to full page height', `${stacked.mapHeight}px`)
 
+// Every figure is a stock on one reference date, so the page must say which day.
+const reference = await page.evaluate(() => {
+  const captions = [...document.querySelectorAll('.text-caption')].map((e) => e.textContent.trim())
+  const gd = document.querySelector('.js-plotly-plot')
+  return {
+    chartNote: captions.find((t) => /Stichtag|Reference date/.test(t)) ?? '',
+    headline: captions.find((t) => /Stand |as of /.test(t)) ?? '',
+    tableNote: captions.find((t) => /Letzte 10|Last 10/.test(t)) ?? '',
+    firstX: gd?.data?.[0]?.x?.[0] ?? '',
+    lastX: gd?.data?.[0]?.x?.at(-1) ?? '',
+  }
+})
+check(/1\. Jänner|1 January/.test(reference.chartNote), 'chart states the annual reference date',
+  reference.chartNote)
+check(/2026/.test(reference.headline) && /Jän|Jan/.test(reference.headline),
+  'headline figure carries its reference date', reference.headline)
+check(/1\. Jänner|1 January/.test(reference.tableNote), 'year table states its reference date',
+  reference.tableNote)
+check(/^\d{4}-\d{2}-\d{2}$/.test(reference.firstX),
+  'chart plots a real date axis', reference.firstX)
+
+// The hover header is the one place the exact day has to appear, so read it for real.
+const plotBox = await page.locator('.js-plotly-plot .nsewdrag').boundingBox()
+await page.mouse.move(plotBox.x + plotBox.width * 0.82, plotBox.y + plotBox.height * 0.5)
+await page.waitForTimeout(1100)
+const hover = await page.evaluate(() =>
+  [...document.querySelectorAll('.hoverlayer text')].map((t) => t.textContent.trim()).filter(Boolean),
+)
+check(/\d{2}\.\d{2}\.\d{4}/.test(hover[0] ?? ''), 'hover header names the exact reference date',
+  hover[0] ?? '(no hover)')
+check(/\d\s\d{3}|\d{3}\s\d{3}/.test(hover[1] ?? ''), 'hover figures use the same separators as the tables',
+  hover[1] ?? '')
+await page.mouse.move(5, 5)
+await page.waitForTimeout(400)
+
+// Annual ticks were auto-thinned by Plotly before; they are now explicit, so
+// they need the same overlap guard as the quarterly axis.
+const annualTicks = await page.evaluate(() => {
+  const t = [...document.querySelectorAll('.js-plotly-plot .xtick text')]
+    .map((e) => e.getBoundingClientRect())
+    .sort((a, b) => a.left - b.left)
+  let overlaps = 0
+  for (let i = 1; i < t.length; i += 1) if (t[i].left < t[i - 1].right) overlaps += 1
+  return { count: t.length, overlaps }
+})
+check(annualTicks.overlaps === 0, 'annual tick labels do not overlap',
+  `${annualTicks.overlaps} of ${annualTicks.count}`)
+
 // Quarterly year ticks must not collide at the narrower chart width.
 await page.getByRole('button', { name: 'Quartalsweise' }).click()
 await page.waitForTimeout(2400)

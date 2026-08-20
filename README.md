@@ -92,6 +92,24 @@ and the year table needing no sideways scrolling.
 
 All data is licensed CC BY 4.0 by Statistik Austria.
 
+### Reference dates
+
+Every figure is a **stock measured on one day**, not an average over a period:
+
+| Series | Reference date | A point labelled … |
+|---|---|---|
+| Annual | 1 January | "2026" means 01.01.2026 |
+| Quarterly | first day of the quarter | "Q3 2026" means 01.07.2026 |
+
+The upstream sheets are titled *Bevölkerung zu **Jahres**beginn* and *Bevölkerung zu
+**Quartals**beginn*, and the generated JSON carries full ISO dates
+(`2026-01-01`, `2026-07-01`), so nothing is inferred from a year label.
+
+This is stated in four places in the UI, because a bare year is easy to misread as
+a whole-year figure: a caption under the chart, the exact date on the chart's hover
+header, the reference date beside the headline population, and a note on the
+ten-year table.
+
 ### Region hierarchy
 
 | Level | Count | On the map | In the list |

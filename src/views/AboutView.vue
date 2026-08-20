@@ -67,6 +67,7 @@ const generated = computed(() =>
 
           <v-card-text>
             <p class="mb-3">{{ t('about_page.data.source_text') }}</p>
+            <p class="mb-3">{{ t('about_page.data.reference_text') }}</p>
             <p class="mb-3">{{ t('about_page.data.validation_text') }}</p>
 
             <i18n-t keypath="about_page.data.licence_text" tag="p" scope="global">

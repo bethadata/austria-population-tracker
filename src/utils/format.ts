@@ -41,6 +41,22 @@ export function formatDate(iso: string, quarterly = false): string {
   return `Q${quarter} ${year}`
 }
 
+/**
+ * The reference date of a data point, compact enough to sit inline.
+ *
+ * Every figure on this site is a stock measured on one day, not an average over
+ * a period: annual points are 1 January, quarterly points are the first day of
+ * the quarter. Showing that date is the difference between "2026" meaning the
+ * start of 2026 and it being read as some figure for the year as a whole.
+ */
+export function formatRefDate(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(iso))
+}
+
 export function formatFullDate(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'long' }).format(new Date(iso))
 }

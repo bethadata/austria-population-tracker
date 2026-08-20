@@ -6,7 +6,7 @@ import { useDisplay } from 'vuetify'
 import { useMetricLabel } from '@/composables/useMetricLabel'
 import { usePopulationStore } from '@/stores/population'
 import type { Metric, Window } from '@/types/data'
-import { formatNumber, formatPercent, formatSigned } from '@/utils/format'
+import { formatNumber, formatPercent, formatRefDate, formatSigned } from '@/utils/format'
 import { computeMetric } from '@/utils/metrics'
 
 const YEARS = 10
@@ -46,6 +46,12 @@ const heroText = computed(() =>
 )
 
 const latest = computed(() => series.value[series.value.length - 1] ?? null)
+
+/** Reference date of the newest point, so the headline figure is unambiguous. */
+const latestDate = computed(() => {
+  const iso = dates.value[dates.value.length - 1]
+  return iso ? formatRefDate(iso, locale.value) : ''
+})
 
 interface YearColumn {
   year: string
@@ -126,7 +132,7 @@ const measures = computed(() => [
 
       <div>
         <div class="text-caption text-medium-emphasis">
-          {{ t('detail.population') }} {{ dates[dates.length - 1]?.slice(0, 4) }}
+          {{ t('detail.population') }} · {{ t('detail.as_of', { date: latestDate }) }}
         </div>
         <div class="text-subtitle-1">{{ formatNumber(latest, locale) }}</div>
       </div>
@@ -135,7 +141,7 @@ const measures = computed(() => [
     <v-divider />
 
     <div class="px-4 pt-2 text-caption text-medium-emphasis">
-      {{ t('detail.last_years', { n: YEARS }) }}
+      {{ t('detail.last_years', { n: YEARS }) }} · {{ t('detail.table_reference') }}
     </div>
 
     <!-- Two orientations of the same ten years; see `yearsAcross`. -->

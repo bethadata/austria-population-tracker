@@ -39,6 +39,11 @@ const chartNote = computed(() => {
   return ''
 })
 
+/** Every point is a stock on one day; say which day. */
+const referenceNote = computed(() =>
+  frequency.value === 'quarterly' ? t('chart.reference_quarterly') : t('chart.reference_annual'),
+)
+
 // Quarterly detail only exists at Bundesland level, so a selection below that
 // falls back to annual rather than silently rendering an empty chart.
 watch(
@@ -170,6 +175,9 @@ watch(
               :height="230"
             />
 
+            <div class="text-caption text-medium-emphasis reference-note">
+              {{ referenceNote }}
+            </div>
             <div v-if="chartNote" class="text-caption text-medium-emphasis">
               {{ chartNote }}
             </div>
@@ -183,6 +191,10 @@ watch(
 </template>
 
 <style scoped>
+.reference-note {
+  opacity: 0.85;
+}
+
 .map-page {
   display: flex;
   flex-direction: column;

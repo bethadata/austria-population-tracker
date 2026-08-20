@@ -62,7 +62,9 @@
     "provisional_note": "Die letzten Quartale sind vorläufige Ergebnisse und wurden nach einer abweichenden Methodik (Mindestaufenthaltsdauer von 90 Tagen) berechnet.",
     "population": "Bevölkerung",
     "no_data": "Keine Daten verfügbar",
-    "citizenship_short": "Staatsangehörigkeit"
+    "citizenship_short": "Staatsangehörigkeit",
+    "reference_annual": "Stichtag: jeweils 1. Jänner des angegebenen Jahres.",
+    "reference_quarterly": "Stichtag: jeweils Quartalsbeginn (1.1., 1.4., 1.7., 1.10.), nicht Quartalsdurchschnitt."
   },
   "detail": {
     "map_indicator": "Kennzahl der Karte",
@@ -71,7 +73,9 @@
     "population": "Bevölkerung",
     "change_abs": "Δ Personen",
     "change_rel": "Δ %",
-    "no_selection": "Keine Region ausgewählt"
+    "no_selection": "Keine Region ausgewählt",
+    "as_of": "Stand {date}",
+    "table_reference": "jeweils zum 1. Jänner"
   },
   "map": {
     "title": "Karte",
@@ -114,6 +118,7 @@
     "data": {
       "title": "Datenquellen",
       "source_text": "Grundlage sind zwei Zeitreihen von Statistik Austria: die Bevölkerung zu Jahresbeginn nach administrativen Gebietseinheiten (seit 2002) sowie die Bevölkerung zu Quartalsbeginn nach Bundesland und Staatsangehörigkeit (seit 2010). Die Geometrien der Verwaltungsgrenzen stammen ebenfalls von Statistik Austria.",
+      "reference_text": "Alle Werte sind Bestandsgrößen zu einem Stichtag, keine Jahresdurchschnitte: Die Jahresreihe bezieht sich jeweils auf den 1. Jänner, die Quartalsreihe auf den jeweiligen Quartalsbeginn (1.1., 1.4., 1.7., 1.10.).",
       "licence_text": "Die Daten stehen unter der Lizenz {link} zur Verfügung.",
       "licence_link": "Creative Commons Namensnennung 4.0 International",
       "validation_text": "Jede Aktualisierung wird automatisch geprüft: Die Summen aller Ebenen müssen übereinstimmen, und die Bezirkswerte werden zusätzlich gegen die OGD-Schnittstelle von Statistik Austria abgeglichen.",

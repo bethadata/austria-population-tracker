@@ -10,7 +10,6 @@ import { useDisplay } from 'vuetify'
 import { useAppTheme } from '@/composables/useTheme'
 import { usePopulationStore } from '@/stores/population'
 import type { AnnualClass, QuarterlyClass } from '@/types/data'
-import { formatDate } from '@/utils/format'
 import { changeSeries, deltaSeries, indexSeries } from '@/utils/metrics'
 import { CHROME, SERIES } from '@/utils/palette'
 
@@ -81,7 +80,7 @@ const yTitle = computed(() => {
 function buildTraces() {
   const chrome = CHROME[mode.value]
   const palette = SERIES[mode.value]
-  const x = dates.value.map((iso) => formatDate(iso, isQuarterly.value))
+  const x = dates.value
 
   const traces = classes.value.map((cls, index) => ({
     x,
@@ -125,6 +124,8 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
   return {
     autosize: true,
     height: props.height,
+    // Decimal and thousands separators, so hover figures match the tables.
+    separators: locale.value === 'de' ? ', ' : '.,',
     margin: { l: 58, r: 12, t: 8, b: 36 },
     paper_bgcolor: chrome.surface,
     plot_bgcolor: chrome.surface,
@@ -140,7 +141,7 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
       tickcolor: chrome.axis,
       tickfont: { color: chrome.muted },
       automargin: true,
-      ...(isQuarterly.value ? quarterlyTicks() : {}),
+      ...axisTicks(),
     },
     yaxis: {
       title: { text: yTitle.value, font: { color: chrome.secondary } },
@@ -176,29 +177,37 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
 }
 
 /**
- * Year ticks for the quarterly axis, thinned to what actually fits.
+ * Year ticks on a date axis, thinned to what actually fits.
  *
- * 67 quarters cannot all be labelled. Even one label per year overlaps once the
- * plot is narrow, so the step is derived from the measured width and the labels
- * are reduced to the bare year - the hover box carries the exact quarter.
- * Category axes take tick positions as indices, not as category names.
+ * 67 quarters obviously cannot all be labelled, and 25 annual points overlap
+ * once the plot is narrow. The interval is the smallest "nice" number of years
+ * that fits the measured width, anchored to the first point so labels land on
+ * round years. `hoverformat` is deliberately separate from `tickformat`: the axis
+ * shows the year, the hover box shows the exact reference date.
+ *
+ * Plotly's date formats are d3-time patterns, so a numeric form is used for
+ * German rather than pulling in a locale bundle for month names.
  */
-function quarterlyTicks(): Partial<Plotly.LayoutAxis> {
-  const labels = dates.value
-  const yearStarts = labels
-    .map((iso, index) => ({ index, year: iso.slice(0, 4), isFirst: iso.slice(5, 7) === '01' }))
-    .filter((entry) => entry.isFirst)
+const NICE_YEAR_STEPS = [1, 2, 5, 10, 25]
+
+function axisTicks(): Partial<Plotly.LayoutAxis> {
+  const first = dates.value[0]
+  const last = dates.value[dates.value.length - 1]
+  const spanYears = first && last ? Number(last.slice(0, 4)) - Number(first.slice(0, 4)) : 0
 
   const width = container.value?.clientWidth ?? 600
-  const perLabel = 42
-  const maxLabels = Math.max(3, Math.floor((width - 70) / perLabel))
-  const step = Math.max(1, Math.ceil(yearStarts.length / maxLabels))
-  const picked = yearStarts.filter((_, i) => i % step === 0)
+  const maxLabels = Math.max(3, Math.floor((width - 70) / 44))
+  const step =
+    NICE_YEAR_STEPS.find((candidate) => spanYears / candidate <= maxLabels) ??
+    NICE_YEAR_STEPS[NICE_YEAR_STEPS.length - 1]
 
   return {
-    tickmode: 'array',
-    tickvals: picked.map((entry) => entry.index),
-    ticktext: picked.map((entry) => entry.year),
+    type: 'date',
+    tickmode: 'linear',
+    tick0: first,
+    dtick: `M${12 * step}`,
+    tickformat: '%Y',
+    hoverformat: locale.value === 'de' ? '%d.%m.%Y' : '%d %b %Y',
     tickangle: 0,
   }
 }
