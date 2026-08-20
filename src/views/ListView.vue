@@ -193,4 +193,11 @@ function open(code: string) {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Long lists of figures read fine a step smaller, and it keeps more rows in
+   view without scrolling. */
+.v-data-table :deep(td),
+.v-data-table :deep(th) {
+  font-size: 0.78rem;
+}
 </style>

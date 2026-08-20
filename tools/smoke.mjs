@@ -20,6 +20,35 @@ function check(ok, label, detail = '') {
   if (!ok) failures.push(label)
 }
 
+
+/**
+ * Click a region by geographic coordinate.
+ *
+ * Targets must be comfortably inside a large polygon. An earlier version aimed
+ * at Vienna's 1st district, which is two or three pixels across at country zoom -
+ * so a one-pixel difference between the projected point and the browser's mouse
+ * position landed outside it, and the test failed for reasons that had nothing to
+ * do with the app. The point is verified against a 1px cross before clicking, so
+ * a fragile target fails loudly as a bad target rather than as a broken click.
+ */
+async function clickRegion(page, lonLat, label) {
+  const box = await page.locator('.map-canvas').boundingBox()
+  const probe = await page.evaluate((ll) => {
+    const m = window.__aptMap
+    const q = m.project(ll)
+    const at = (dx, dy) =>
+      m.queryRenderedFeatures([q.x + dx, q.y + dy], { layers: ['regions-fill'] })[0]?.properties?.code
+    const codes = [at(0, 0), at(-1, 0), at(1, 0), at(0, -1), at(0, 1)]
+    return { x: q.x, y: q.y, codes, solid: codes.every((c) => c && c === codes[0]) }
+  }, lonLat)
+
+  check(probe.solid, `${label}: click target is solidly inside one region`,
+    JSON.stringify(probe.codes))
+  await page.mouse.click(box.x + probe.x, box.y + probe.y)
+  await page.waitForTimeout(1500)
+  return probe.codes[0]
+}
+
 const browser = await chromium.launch()
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } })
 const page = await context.newPage()
@@ -46,14 +75,11 @@ check(map?.sourceLoaded === true, 'geojson source loaded (worker alive)')
 check((map?.rendered ?? 0) > 0, 'polygons rendered', `rendered=${map?.rendered}`)
 
 // Clicking a region must drive both the detail panel and the selection outline.
-const box = await page.locator('.map-canvas').boundingBox()
-const pt = await page.evaluate(() => { const q = window.__aptMap.project([16.37, 48.21]); return { x: q.x, y: q.y } })
-await page.mouse.click(box.x + pt.x, box.y + pt.y)
-await page.waitForTimeout(1500)
+const clickedCode = await clickRegion(page, [13.9, 48.1], 'Bundesland click')
 const title = (await page.locator('.region-name').first().textContent())?.trim()
 const filter = await page.evaluate(() => JSON.stringify(window.__aptMap.getFilter('regions-selected')))
-check(title === 'Wien', 'clicking Vienna selects it', `title=${title}`)
-check(filter.includes('AT13'), 'selection outline follows the click', filter)
+check(!!title && title !== 'Österreich', 'clicking a Bundesland selects it', `title=${title}`)
+check(filter.includes(clickedCode), 'selection outline follows the click', `${filter} vs ${clickedCode}`)
 
 // Citizenship breakdown: three annual classes, fixed colour order.
 await page.locator('input[type="checkbox"]').first().check()
@@ -328,15 +354,10 @@ check(handoff.measures === 3 && handoff.years === 10, 'Gemeinde detail table pop
   `${handoff.measures} measures x ${handoff.years} years`)
 
 // ... and the map must remain clickable afterwards.
-const box2 = await page.locator('.map-canvas').boundingBox()
-const pt2 = await page.evaluate(() => {
-  const q = window.__aptMap.project([16.37, 48.21])
-  return { x: q.x, y: q.y }
-})
-await page.mouse.click(box2.x + pt2.x, box2.y + pt2.y)
-await page.waitForTimeout(1600)
+await clickRegion(page, [14.25, 47.55], 'post-handoff click')
 const afterClick = await page.evaluate(() => document.querySelector('.region-name')?.textContent?.trim())
-check(afterClick !== handoff.name, 'map clicks still work after handoff', `${afterClick}`)
+check(afterClick !== handoff.name, 'map clicks still work after handoff',
+  `still showing ${afterClick}`)
 
 // About page must span the full width, not a narrow column.
 await page.goto(BASE + '#/about', { waitUntil: 'domcontentloaded' })

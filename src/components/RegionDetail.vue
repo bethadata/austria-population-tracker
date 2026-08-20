@@ -117,7 +117,7 @@ const measures = computed(() => [
       :class="display.smAndDown.value ? 'ga-3' : 'ga-8'"
     >
       <div class="d-flex align-baseline ga-2 flex-wrap">
-        <span class="region-name text-h6">{{ displayName || t('detail.no_selection') }}</span>
+        <span class="region-name text-subtitle-1 font-weight-medium">{{ displayName || t('detail.no_selection') }}</span>
         <span v-if="region" class="text-caption text-medium-emphasis">
           {{ t(`levels_short.${region.level}`) }} · {{ region.code }}
         </span>
@@ -189,7 +189,7 @@ const measures = computed(() => [
 <style scoped>
 .hero {
   /* Proportional figures: this is a standalone number, not a table column. */
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   line-height: 1.1;
   font-weight: 500;
 }
@@ -206,10 +206,10 @@ const measures = computed(() => [
 
 .detail-table th,
 .detail-table td {
-  padding: 6px 10px;
+  padding: 5px 10px;
   text-align: right;
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
@@ -219,7 +219,7 @@ const measures = computed(() => [
 }
 
 .detail-table thead th {
-  font-size: 0.72rem;
+  font-size: 0.67rem;
   font-weight: 600;
   opacity: 0.72;
 }
@@ -246,12 +246,12 @@ const measures = computed(() => [
 @media (max-width: 400px) {
   .detail-table th,
   .detail-table td {
-    padding: 6px 4px;
-    font-size: 0.72rem;
+    padding: 5px 4px;
+    font-size: 0.7rem;
   }
 
   .detail-table thead th {
-    font-size: 0.66rem;
+    font-size: 0.64rem;
   }
 
   .table-scroll {

@@ -65,7 +65,7 @@ const ticks = computed(() => [
 }
 
 .legend-title {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .legend-unit {
@@ -89,7 +89,7 @@ const ticks = computed(() => [
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

@@ -116,10 +116,33 @@ function buildTraces() {
     }
   }
 
-  return { traces, shapes }
+  // Plotly's autorange leaves the peak almost touching the top of the plot, and
+  // the mode bar floats over exactly that corner. Padding is asymmetric because
+  // only the top has something covering it.
+  const values = traces
+    .flatMap((trace) => trace.y)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+
+  let yRange: [number, number] | undefined
+  if (values.length) {
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    // A flat series has no span to scale, so fall back to a share of its level.
+    const span = max - min || Math.max(Math.abs(max) * 0.02, 1)
+    yRange = [min - span * HEADROOM_BOTTOM, max + span * HEADROOM_TOP]
+  }
+
+  return { traces, shapes, yRange }
 }
 
-function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
+/** Share of the data span left clear below and above the series. */
+const HEADROOM_BOTTOM = 0.06
+const HEADROOM_TOP = 0.18
+
+function layout(
+  shapes: Partial<Plotly.Shape>[],
+  yRange: [number, number] | undefined,
+): Partial<Plotly.Layout> {
   const chrome = CHROME[mode.value]
   return {
     autosize: true,
@@ -131,7 +154,7 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
     plot_bgcolor: chrome.surface,
     font: {
       family: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-      size: 12,
+      size: 11,
       color: chrome.secondary,
     },
     xaxis: {
@@ -153,6 +176,7 @@ function layout(shapes: Partial<Plotly.Shape>[]): Partial<Plotly.Layout> {
       tickfont: { color: chrome.muted },
       separatethousands: true,
       automargin: true,
+      ...(yRange ? { range: yRange, autorange: false } : {}),
     },
     // A legend is always present for two or more series, so identity never
     // rests on colour alone.
@@ -219,7 +243,7 @@ function chartConfig(): Partial<Plotly.Config> {
     responsive: true,
     // The mode bar is a row of small targets that is unusable by thumb, and
     // scroll-zoom would hijack the page scroll.
-    displayModeBar: !small,
+    displayModeBar: small ? false : 'hover',
     scrollZoom: false,
     modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
   }
@@ -227,8 +251,8 @@ function chartConfig(): Partial<Plotly.Config> {
 
 async function render() {
   if (!container.value) return
-  const { traces, shapes } = buildTraces()
-  await Plotly.react(container.value, traces, layout(shapes), chartConfig())
+  const { traces, shapes, yRange } = buildTraces()
+  await Plotly.react(container.value, traces, layout(shapes, yRange), chartConfig())
 }
 
 let resizeObserver: ResizeObserver | null = null

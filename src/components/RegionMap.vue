@@ -156,7 +156,14 @@ function escapeHtml(value: string): string {
   ))
 }
 
-const popup = new Popup({ closeButton: false, closeOnClick: false, offset: 8 })
+const popup = new Popup({
+  closeButton: false,
+  closeOnClick: false,
+  offset: 8,
+  // See the pointer-events rule on this class: the popup must never take the
+  // pointer, or it swallows the click that follows the hover.
+  className: 'map-tip-popup',
+})
 
 function bindInteractions() {
   const instance = map.value
@@ -403,6 +410,21 @@ defineExpose({ resetView })
 
 .map-tip span {
   color: var(--apt-tip-muted, #52514e);
+}
+
+/**
+ * A hover tooltip must never take the pointer.
+ *
+ * MapLibre popups default to pointer-events: auto. Because this one is placed
+ * next to the cursor, the mousedown that follows a mousemove could land on the
+ * popup instead of the canvas - so hovering a region and then clicking it did
+ * nothing, and moving between two nearby regions dropped the tooltip entirely
+ * (the map saw mouseleave but never the next mousemove). There is nothing here
+ * to interact with, so the whole popup opts out.
+ */
+.map-tip-popup,
+.map-tip-popup * {
+  pointer-events: none !important;
 }
 
 .maplibregl-popup-content {
