@@ -20,3 +20,49 @@ html {
     font-size: 15.5px;
   }
 }
+
+/*
+ * Headings carry the document outline, not appearance.
+ *
+ * The pages are built from Vuetify cards whose text sizing comes from component
+ * and utility classes, so a heading element only has to stop contributing the
+ * browser's own block margins. Size and weight are left to the classes already
+ * on the element, which keeps h1-h6 free to mark structure wherever the outline
+ * needs it without moving anything on screen.
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+}
+
+/*
+ * Prose blocks in the card-based content pages.
+ *
+ * Vuetify's reset strips the paragraph margin, which is right for the labels
+ * and table cells that make up most of the UI and wrong for the About page, so
+ * the rhythm is put back only where the text is actually prose.
+ */
+.prose p {
+  margin-bottom: 0.85rem;
+}
+
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+/*
+ * Card headings on the About page wrap.
+ *
+ * `.v-card-title` is single-line by design -- nowrap plus an ellipsis -- which
+ * is fine for a chart card and wrong for a heading in a third-width column:
+ * "Hinweis zu KI-Unterstuetzung" rendered as "Hinweis zu KI-Unt...". Scoped to
+ * the page rather than applied globally, so card titles elsewhere keep the
+ * single-line behaviour their layouts assume.
+ */
+.about-page .v-card-title {
+  white-space: normal;
+}

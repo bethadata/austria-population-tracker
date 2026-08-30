@@ -56,9 +56,13 @@ watch(
 
 <template>
   <v-container fluid class="pa-4 map-page">
+    <!-- The page name. Visually redundant next to the app bar and the active
+         nav item, so it is carried for the document outline only. -->
+    <h1 class="d-sr-only">{{ t('nav.map') }}</h1>
+
     <!-- Filters in one row above everything, never interleaved with the views.
-         On a phone they collapse behind a summary line: stacked, they filled
-         most of the screen and pushed the map below the fold. -->
+         On a phone they collapse behind a summary line, which keeps the map on
+         the first screen. -->
     <v-card flat border class="mb-3 flex-shrink-0">
       <v-card-text v-if="display.smAndDown.value" class="py-1 px-2">
         <v-btn
@@ -68,7 +72,7 @@ watch(
           :append-icon="filtersOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
           @click="filtersOpen = !filtersOpen"
         >
-          <span class="text-truncate text-body-2">
+          <span class="text-truncate text-body-medium">
             {{ t(`levels.${store.mapLevel}`) }} · {{ fullLabel }}
           </span>
         </v-btn>
@@ -124,15 +128,17 @@ watch(
          stretched to the full page height just to match a tall side column. -->
     <v-row class="content-row" no-gutters>
       <v-col cols="12" lg="7" class="pe-lg-3 pb-3 pb-lg-0 map-column">
+        <h2 class="d-sr-only">{{ t('sections.map') }}</h2>
         <v-card flat border class="map-card">
           <RegionMap />
         </v-card>
-        <div class="text-caption text-medium-emphasis mt-2 flex-shrink-0">
+        <div class="text-body-small text-medium-emphasis mt-2 flex-shrink-0">
           {{ t('map.hint') }}
         </div>
       </v-col>
 
       <v-col cols="12" lg="5" class="chart-column">
+        <h2 class="d-sr-only">{{ t('sections.chart') }}</h2>
         <v-card flat border class="chart-card">
           <v-card-text class="pb-1">
             <div class="d-flex flex-wrap ga-3 align-center mb-1">
@@ -175,10 +181,10 @@ watch(
               :height="230"
             />
 
-            <div class="text-caption text-medium-emphasis reference-note">
+            <div class="text-body-small text-medium-emphasis reference-note">
               {{ referenceNote }}
             </div>
-            <div v-if="chartNote" class="text-caption text-medium-emphasis">
+            <div v-if="chartNote" class="text-body-small text-medium-emphasis">
               {{ chartNote }}
             </div>
           </v-card-text>
@@ -201,11 +207,10 @@ watch(
 }
 
 @media (min-width: 1280px) {
-  /* No fixed row height. Pinning it to a viewport fraction meant that on shorter
-     windows the row was smaller than the chart card needed, and overflow: hidden
-     clipped the bottom of the plot where the table card began. The row now takes
-     its height from the chart's own content and the map matches it exactly, so
-     neither card can ever be cut off. */
+  /* The row takes its height from the chart's own content and the map matches
+     it exactly, so neither card is ever cut off. A height pinned to a viewport
+     fraction cannot do that: on a short window it comes out smaller than the
+     chart needs, and overflow: hidden then clips the bottom of the plot. */
   .content-row {
     flex-wrap: nowrap;
     align-items: stretch;
@@ -235,10 +240,10 @@ watch(
 }
 
 @media (max-width: 1279px) {
-  /* Austria projects to roughly 1.94:1 on screen, so a fixed height wasted most
-     of a phone card. Sizing from the width keeps the country large relative to
-     its card; the ratio is a little taller than 1.94 to leave room for the
-     fit padding and the zoom control. */
+  /* Austria projects to roughly 1.94:1 on screen, so the card is sized from its
+     own width rather than to a fixed height - that is what keeps the country
+     large relative to the card at any phone width. The ratio is set a little
+     taller than 1.94 to leave room for the fit padding and the zoom control. */
   .map-card {
     height: auto;
     aspect-ratio: 1.6;

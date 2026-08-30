@@ -322,20 +322,12 @@ watch(mode, (value) => {
 })
 
 /**
- * Pin the zoom floor to the whole-country view.
- *
- * Austria is the entire subject of the map, so zooming out past it only adds
- * empty space. Deriving the floor from cameraForBounds keeps it exact for the
- * current container instead of hard-coding a level that would be wrong at
- * another viewport size.
- */
-/**
  * Push the palette into CSS variables on the map container.
  *
  * MapLibre's stylesheet hard-codes `background: #fff` on the popup body and
- * `#fff` on all eight tip variants, and the text colour is inherited - which in
- * dark mode meant white text on a white popup. Popups are appended to the map
- * container, so variables set here reach them.
+ * `#fff` on all eight tip variants, and the text colour is inherited, so in
+ * dark mode the popup reads as white text on a white body. Popups are appended
+ * to the map container, so variables set here reach them.
  */
 function applyTipTheme(instance: MapLibreMap) {
   const chrome = CHROME[mode.value]
@@ -346,14 +338,32 @@ function applyTipTheme(instance: MapLibreMap) {
   el.style.setProperty('--apt-tip-border', chrome.border)
 }
 
+/**
+ * Pin the zoom floor to the whole-country view.
+ *
+ * Austria is the entire subject of the map, so zooming out past it only adds
+ * empty space. Deriving the floor from cameraForBounds keeps it exact for the
+ * current container instead of hard-coding a level that is wrong at another
+ * viewport size.
+ */
 function applyMinZoom(instance: MapLibreMap) {
   const camera = instance.cameraForBounds(BOUNDS, { padding: FIT_PADDING })
   if (camera?.zoom === undefined) return
   instance.setMinZoom(camera.zoom)
 }
 
+/**
+ * Back to the whole country: refit the camera *and* drop the region selection.
+ *
+ * Clicking a polygon is the only way to select on this page and clicking it
+ * again does not clear it, so without this there is no route back to the
+ * Austria-wide series once any Bundesland or Bezirk has been picked. 'AT' is
+ * the store's own initial value, and it has no polygon, so `mapHighlight`
+ * resolves to null and the selection ring disappears with it.
+ */
 function resetView() {
   map.value?.fitBounds(BOUNDS, { padding: FIT_PADDING })
+  store.selected = 'AT'
 }
 
 defineExpose({ resetView })
@@ -369,7 +379,8 @@ defineExpose({ resetView })
       class="map-reset"
       size="small"
       variant="tonal"
-      prepend-icon="mdi-fit-to-screen-outline"
+      prepend-icon="mdi-map-outline"
+      :title="t('map.reset_hint')"
       @click="resetView"
     >
       {{ t('map.reset') }}
@@ -415,12 +426,11 @@ defineExpose({ resetView })
 /**
  * A hover tooltip must never take the pointer.
  *
- * MapLibre popups default to pointer-events: auto. Because this one is placed
- * next to the cursor, the mousedown that follows a mousemove could land on the
- * popup instead of the canvas - so hovering a region and then clicking it did
- * nothing, and moving between two nearby regions dropped the tooltip entirely
- * (the map saw mouseleave but never the next mousemove). There is nothing here
- * to interact with, so the whole popup opts out.
+ * MapLibre popups default to pointer-events: auto, and this one is placed next
+ * to the cursor. Left interactive it catches the mousedown that follows the
+ * mousemove: the click never reaches the canvas, and moving between two nearby
+ * regions drops the tooltip because the map sees mouseleave and no further
+ * mousemove. There is nothing here to interact with, so the whole popup opts out.
  */
 .map-tip-popup,
 .map-tip-popup * {

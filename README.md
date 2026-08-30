@@ -4,6 +4,8 @@ An interactive dashboard of Austria's population by region, from 2002 to today. 
 Bundesland or Bezirk on the map to inspect its time series; the map colouring shows how
 fast each region is growing or shrinking.
 
+![The map view: Austria by Bundesland, coloured by annualised growth, with the selected region's time series and ten-year table beside it](assets/screenshot.png)
+
 **Live demo:** [bethadata.github.io/austria-population-tracker](https://bethadata.github.io/austria-population-tracker/)
 
 ---
@@ -16,9 +18,7 @@ fast each region is growing or shrinking.
 - **Region detail** — the map's own indicator as a single headline figure, plus a ten-year table with years across the columns and population, absolute and relative change down the rows
 - **Quarterly detail** — at Bundesland level, with a 5-way citizenship split and provisional periods clearly marked
 - **Searchable, sortable list** — all 2 256 regions down to municipality level, ranked by fastest growing / shrinking / largest
-- **Bilingual** — German and English, with a persisted preference
-- **Light and dark themes** — both selected and validated, not an automatic flip
-- **Mobile aware** — filters collapse behind a summary line, the map is sized from its width, the year table flips to years-down-the-rows, and both map and chart release one-finger gestures so the page stays scrollable
+- **Bilingual** — German and English
 - **Static deployment** — runs entirely in the browser, no server and no API keys
 
 ---
@@ -57,27 +57,6 @@ npm run data:validate  # re-run validation on the current data
 npm run data:geo       # rebuild boundary geometry (rarely needed)
 ```
 
-### Browser tests
-
-```bash
-npm run build
-npm run preview          # serves on :4174
-npm run test:smoke       # functional assertions, exits non-zero on failure
-npm run test:mobile      # phone profiles with touch emulation
-npm run test:inspect     # console/network sweep + screenshots per route
-```
-
-`test:smoke` asserts the paths that fail *silently* — most importantly that
-MapLibre's GeoJSON source actually loaded, since a dead worker leaves the map
-blank with nothing in the console.
-
-`test:mobile` is separate because it needs real device emulation (touch, DPR,
-mobile user agent) rather than just a narrow window. It covers the things that
-only break on a phone: the whole map being visible on the first screen, the map
-not being mostly empty space, two-finger panning so the page stays scrollable,
-and the year table needing no sideways scrolling.
-
----
 
 ## Data
 
@@ -121,26 +100,6 @@ ten-year table.
 | Politische Bezirke | 116 | ✓ | ✓ |
 | Gemeinden (LAU 2) | 2 092 | — | ✓ |
 
-### Updating
-
-```bash
-python pipeline/update.py            # fetch, rebuild, validate
-python pipeline/update.py --commit   # ... and push if anything changed
-```
-
-The same script runs monthly in [`update-data.yml`](.github/workflows/update-data.yml).
-It commits only when the data actually changed, and **never commits a build that fails
-validation**. The pipeline uses only the Python standard library, so the scheduled job
-has nothing to install.
-
-### Validation
-
-Every build runs 22 checks before it can be published:
-
-- **Structural** — hierarchy resolves, no gaps, `total == austrian + foreign`, every level sums to the national total, districts sum into their Bundesland, no implausible year-on-year jumps
-- **Quarterly** — class arithmetic, Bundesländer sum to Austria, annual and quarterly agree on 1 January
-- **Cross-source** — national and all 116 district totals reconciled against the OGD API, which is produced by an independent Statistik Austria pipeline
-
 ### A known upstream inconsistency
 
 The three sheets of the annual workbook are not on a single territorial status. The
@@ -155,50 +114,6 @@ values exactly for all other districts in every year, and the corrections are re
 `manifest.json`. Totals are never modified — they are confirmed correct against the OGD API.
 
 ---
-
-## Notes for maintainers
-
-### Map level and list level are separate
-
-`store.level` is the list's browsing level and reaches down to municipality;
-`store.mapLevel` is the map's own and is restricted to the two levels that have
-geometry. Keeping them separate is not cosmetic — sharing one level meant that
-selecting a Gemeinde in the list left the map requesting
-`geo/municipality.geojson`, which does not exist. The fetch failed, the source
-never loaded, and the map went blank *and* stopped responding to clicks.
-
-When a selection has no polygon of its own, `mapHighlight` walks up the hierarchy
-and outlines the mapped region containing it, so the selection is still located on
-screen while the chart and detail panel describe the Gemeinde.
-
-### Touch gestures must be released deliberately
-
-Both the map and the chart capture drag gestures by default. Mid-page on a phone
-that means a vertical swipe pans the map or the plot instead of scrolling, and
-the reader gets stuck. The map sets `cooperativeGestures` below the `sm`
-breakpoint (two fingers to pan, with an on-canvas hint) and the chart sets
-`dragmode: false` with `scrollZoom: false` and no mode bar.
-
-Also note `.map-wrap` in `RegionMap.vue` keeps a deliberately small
-`min-height`: the card decides the map's height, and a large min-height there
-silently overrides the width-derived sizing on narrow screens.
-
-### MapLibre's worker must be imported explicitly
-
-MapLibre derives its worker URL from `import.meta.url` of its own bundle,
-expecting `./maplibre-gl-worker.mjs` beside it. After bundling that file does not
-exist, so the request falls through to the SPA fallback, the module worker is
-handed `index.html`, and it dies parsing HTML. MapLibre swallows worker failures,
-so the only symptom is that every GeoJSON source hangs forever — a blank map with
-an empty console.
-
-The fix is in [`RegionMap.vue`](src/components/RegionMap.vue): import the worker
-through Vite (`?worker&url`) so it is emitted as a real asset with its
-shared-chunk import intact, and hand the URL to `setWorkerUrl()`. This also
-requires `worker: { format: 'es' }` in [`vite.config.ts`](vite.config.ts), since
-Vite's default `iife` worker format cannot carry the worker's own `import`.
-
-If the map ever goes blank after a dependency bump, check this first.
 
 ## Project Structure
 
@@ -220,25 +135,24 @@ austria-population-tracker/
 │   └── geo/*.geojson      simplified boundaries
 ├── src/
 │   ├── views/             MapView · ListView · AboutView
-│   ├── components/        RegionMap · PopulationChart · MapLegend · RegionDetail
+│   ├── components/        RegionMap · PopulationChart · MapLegend · RegionDetail · AppFooter
 │   ├── stores/            population.ts (shared view state)
 │   ├── composables/       useTheme · useMetricLabel
-│   ├── utils/             palette · metrics · format
+│   ├── utils/             palette · metrics · format · links
 │   └── locales/           de.json · en.json
+├── tools/                 smoke.mjs · mobile-check.mjs · inspect.mjs
 └── .github/workflows/     deploy.yml · update-data.yml
 ```
 
 ---
 
-## Deployment
 
-Pushing to `main` triggers [`deploy.yml`](.github/workflows/deploy.yml), which builds and
-publishes to GitHub Pages. The router uses hash mode because GitHub Pages serves static
-files with no rewrite rules, so a deep link under history mode would 404 on reload.
+## Related projects
 
-To host under a different repository name, update `BASE` in [`vite.config.ts`](vite.config.ts).
+Two sibling dashboards, same stack and same conventions:
 
----
+- [Austria Transition Tracker](https://bethadata.github.io/austria-transition-tracker-v2/) — energy transition and emissions
+- [Austria Power Simulator](https://bethadata.github.io/austria-power-sim/) — hourly electricity balance
 
 ## Licence
 

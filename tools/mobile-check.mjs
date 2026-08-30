@@ -58,9 +58,9 @@ for (const [name, dev] of Object.entries({
   })
 
   check(!m.horizontalScroll, `${name}: no horizontal page scroll`)
-  // The original failure was that stacked filters pushed the map off the first
-  // screen entirely. Requiring the whole map to be visible encodes that directly,
-  // which a page-length threshold only approximates.
+  // Stacked filters can push the map off the first screen entirely. Requiring the
+  // whole map to be visible encodes that directly, which a page-length threshold
+  // only approximates.
   check(m.mapFullyVisible, `${name}: whole map visible on the first screen`,
     `map top ${m.mapTop}px of ${dev.viewport.height}px`)
   check(m.mapFill !== null && m.mapFill > 0.45, `${name}: map is not mostly empty space`, `fill ${m.mapFill}`)

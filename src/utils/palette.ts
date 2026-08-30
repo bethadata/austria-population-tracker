@@ -69,15 +69,16 @@ export const CHROME: Record<Mode, Record<string, string>> = {
 /**
  * Break points for the choropleth, expressed as annualised percent change.
  *
- * Fixed rather than data-driven on purpose: a quantile scale would repaint every
- * region whenever the level or period changed, so a district could shift colour
+ * Eight breaks for nine colour classes: four per arm plus the neutral band. The
+ * +/-0.15 %/yr centre band is what reads as 'flat', and the outer bounds sit
+ * just past the real spread of Austrian regional growth, so the strongest
+ * colours stay reachable without clipping a large share of regions.
+ *
+ * Fixed rather than data-driven on purpose: a quantile scale repaints every
+ * region whenever the level or period changes, so a district shifts colour
  * without its own value moving. Fixed breaks keep colour meaning stable across
- * every view, and the bands match the real spread of Austrian regional growth.
+ * every view.
  */
-// Eight breaks for nine colour classes (four per arm plus the neutral band).
-// The +/-0.15 %/yr centre band is what reads as 'flat'; the outer bounds sit
-// just past the real spread of Austrian regional growth so the strongest
-// colours stay reachable without clipping a large share of regions.
 export const BREAKS = [-2, -1, -0.5, -0.15, 0.15, 0.5, 1, 2]
 
 /** Build MapLibre `step` expression stops: [color, stop, color, stop, ...]. */

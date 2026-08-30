@@ -76,6 +76,10 @@ function open(code: string) {
 
 <template>
   <v-container fluid class="pa-4">
+    <!-- The page name. Visually redundant next to the app bar and the active
+         nav item, so it is carried for the document outline only. -->
+    <h1 class="d-sr-only">{{ t('nav.list') }}</h1>
+
     <v-card flat border class="mb-4">
       <v-card-text class="d-flex flex-wrap ga-4 align-center py-3">
         <v-select
@@ -150,13 +154,14 @@ function open(code: string) {
               thumb-label
             />
           </div>
-          <span class="text-caption text-medium-emphasis">
+          <span class="text-body-small text-medium-emphasis">
             {{ t('list.min_population_hint') }}
           </span>
         </div>
       </v-card-text>
     </v-card>
 
+    <h2 class="d-sr-only">{{ t('sections.table') }}</h2>
     <v-card flat border>
       <v-data-table
         :headers="headers"
@@ -167,6 +172,23 @@ function open(code: string) {
         hover
         @click:row="(_: unknown, { item }: { item: { code: string } }) => open(item.code)"
       >
+        <!-- One real control per row, so the table is operable by keyboard and
+             not only by pointer. A focusable `tr` cannot carry a role that says
+             it is activatable - `role="button"` on a row would take it out of
+             the table's own structure - so the name cell holds a button, named
+             after the region it opens. The whole row stays clickable for the
+             mouse, and the button stops that click rather than firing both. -->
+        <template #item.name="{ item }">
+          <button
+            type="button"
+            class="row-open"
+            :aria-label="t('list.open_region', { name: item.name })"
+            @click.stop="open(item.code)"
+          >
+            {{ item.name }}
+          </button>
+        </template>
+
         <template #item.latest="{ item }">
           <span class="tabular">{{ formatNumber(item.latest, locale) }}</span>
         </template>
@@ -192,6 +214,34 @@ function open(code: string) {
 <style scoped>
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* The button carries the row's action, not a look of its own: it inherits the
+   cell's type so the table still reads as a table. The underline appears only
+   on hover, and the ring only on keyboard focus, so neither costs any width. */
+.row-open {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-open:hover {
+  text-decoration: underline;
+}
+
+.row-open:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The whole row is clickable, so it should say so under the pointer. */
+.v-data-table :deep(tbody tr) {
+  cursor: pointer;
 }
 
 /* Long lists of figures read fine a step smaller, and it keeps more rows in

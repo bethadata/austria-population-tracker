@@ -5,4 +5,17 @@ raw_cache/
 .DS_Store
 .vscode/
 __pycache__/
+
+# Throwaway output from `npm run test:inspect` and `test:mobile`. The README's
+# screenshot is a tracked file at assets/screenshot.png -- not this directory.
 screenshots/
+
+# ----------------------
+# Claude Code (never published)
+# ----------------------
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.claudeignore
+.mcp.json

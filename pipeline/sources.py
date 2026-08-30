@@ -51,8 +51,9 @@ def discover_urls() -> dict[str, str]:
     urls = {}
     for key, spec in DATASETS.items():
         match = spec["pattern"].search(page) if page else None
-        # The pattern matches a bare filename, so recover the surrounding href
-        # when present; otherwise fall back to the known directory.
+        # The pattern matches a bare filename, which is recombined with the
+        # publishing directory - that path is stable even when the file itself is
+        # renamed. Without a match, fall back to the last known full path.
         path = f"/fileadmin/pages/405/{match.group(0)}" if match else spec["fallback"]
         urls[key] = path if path.startswith("http") else BASE + path
         print(f"  {key:10s} -> {urls[key]}{'' if match else '  (fallback)'}")

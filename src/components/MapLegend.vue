@@ -20,11 +20,10 @@ function swatchTitle(band: { from: number | null; to: number | null }): string {
 }
 
 /**
- * Selective ticks, not one per break. Printing all eight collided with the
- * end labels and turned the ramp into a wall of digits; the exact band of any
- * swatch is available on hover, and per-region values in the map tooltip.
- * The extremes carry words rather than numbers because those bands are
- * open-ended anyway.
+ * Selective ticks, not one per break. All eight collide with the end labels and
+ * turn the ramp into a wall of digits; the exact band of any swatch is available
+ * on hover, and per-region values in the map tooltip. The extremes carry words
+ * rather than numbers because those bands are open-ended.
  */
 const ticks = computed(() => [
   t('map.shrinking'),

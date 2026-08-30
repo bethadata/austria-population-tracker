@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import AppFooter from '@/components/AppFooter.vue'
 import { useAppTheme } from '@/composables/useTheme'
 import { setLocale, type Locale } from '@/i18n'
 import { usePopulationStore } from '@/stores/population'
@@ -71,15 +72,6 @@ onMounted(async () => {
           color="primary"
         />
       </v-list>
-
-      <template #append>
-        <div class="pa-4 text-caption text-medium-emphasis">
-          <div>{{ t('footer.source') }}</div>
-          <div v-if="store.manifest?.source_vintage">
-            {{ t('footer.data_as_of', { date: store.manifest.source_vintage }) }}
-          </div>
-        </div>
-      </template>
     </v-navigation-drawer>
 
     <v-main>
@@ -94,5 +86,7 @@ onMounted(async () => {
 
       <router-view v-else />
     </v-main>
+
+    <AppFooter />
   </v-app>
 </template>

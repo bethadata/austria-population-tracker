@@ -117,30 +117,31 @@ const measures = computed(() => [
       :class="display.smAndDown.value ? 'ga-3' : 'ga-8'"
     >
       <div class="d-flex align-baseline ga-2 flex-wrap">
-        <span class="region-name text-subtitle-1 font-weight-medium">{{ displayName || t('detail.no_selection') }}</span>
-        <span v-if="region" class="text-caption text-medium-emphasis">
+        <!-- The selected region names this panel, so it is the panel's heading. -->
+        <h2 class="region-name">{{ displayName || t('detail.no_selection') }}</h2>
+        <span v-if="region" class="text-body-small text-medium-emphasis">
           {{ t(`levels_short.${region.level}`) }} · {{ region.code }}
         </span>
       </div>
 
       <div>
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('detail.map_indicator') }} · {{ fullLabel }}
         </div>
         <div class="hero">{{ heroText }}</div>
       </div>
 
       <div>
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('detail.population') }} · {{ t('detail.as_of', { date: latestDate }) }}
         </div>
-        <div class="text-subtitle-1">{{ formatNumber(latest, locale) }}</div>
+        <div class="text-title-medium">{{ formatNumber(latest, locale) }}</div>
       </div>
     </div>
 
     <v-divider />
 
-    <div class="px-4 pt-2 text-caption text-medium-emphasis">
+    <div class="px-4 pt-2 text-body-small text-medium-emphasis">
       {{ t('detail.last_years', { n: YEARS }) }} · {{ t('detail.table_reference') }}
     </div>
 
@@ -187,6 +188,13 @@ const measures = computed(() => [
 </template>
 
 <style scoped>
+/* Sized here rather than by a utility class, so the heading element carries no
+   size of its own and sits on the same baseline as the figures beside it. */
+.region-name {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
 .hero {
   /* Proportional figures: this is a standalone number, not a table column. */
   font-size: 1.45rem;

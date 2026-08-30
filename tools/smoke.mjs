@@ -1,10 +1,9 @@
 /**
  * Functional smoke test against the built site.
  *
- * Assertions rather than screenshots: these are the paths that broke silently
- * during development, where nothing appears in the console. The MapLibre source
- * check in particular exists because a dead worker leaves the map blank with no
- * error at all.
+ * Assertions rather than screenshots: these cover the paths that fail silently,
+ * with nothing in the console. The MapLibre source check in particular exists
+ * because a dead worker leaves the map blank with no error at all.
  *
  *   npm run build && npm run preview &   # then:
  *   npm run test:smoke
@@ -12,6 +11,11 @@
 import { chromium } from '@playwright/test'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4174/austria-population-tracker/'
+
+// Secondary/metadata text carries Vuetify's Material 3 caption token. Named once
+// because the assertions below select on it and Vuetify renamed this scale between
+// major versions; a stale name here selects nothing and the checks pass vacuously.
+const CAPTION = '.text-body-small'
 const failures = []
 const errors = []
 
@@ -24,12 +28,12 @@ function check(ok, label, detail = '') {
 /**
  * Click a region by geographic coordinate.
  *
- * Targets must be comfortably inside a large polygon. An earlier version aimed
- * at Vienna's 1st district, which is two or three pixels across at country zoom -
- * so a one-pixel difference between the projected point and the browser's mouse
- * position landed outside it, and the test failed for reasons that had nothing to
- * do with the app. The point is verified against a 1px cross before clicking, so
- * a fragile target fails loudly as a bad target rather than as a broken click.
+ * Targets must be comfortably inside a large polygon. Vienna's 1st district is
+ * two or three pixels across at country zoom, so a one-pixel difference between
+ * the projected point and the browser's mouse position lands outside it and the
+ * test fails for reasons that have nothing to do with the app. The point is
+ * verified against a 1px cross before clicking, so a fragile target fails loudly
+ * as a bad target rather than as a broken click.
  */
 async function clickRegion(page, lonLat, label) {
   const box = await page.locator('.map-canvas').boundingBox()
@@ -81,6 +85,21 @@ const filter = await page.evaluate(() => JSON.stringify(window.__aptMap.getFilte
 check(!!title && title !== 'Österreich', 'clicking a Bundesland selects it', `title=${title}`)
 check(filter.includes(clickedCode), 'selection outline follows the click', `${filter} vs ${clickedCode}`)
 
+// A click is the only selection gesture on this page and clicking the same
+// polygon again does not clear it, so the reset button is the sole route back
+// to the Austria-wide series. It has to clear the outline, not only the panel.
+await page.locator('.map-reset').click()
+await page.waitForTimeout(1500)
+const reset = await page.evaluate(() => ({
+  name: document.querySelector('.region-name')?.textContent?.trim(),
+  filter: JSON.stringify(window.__aptMap.getFilter('regions-selected')),
+}))
+check(reset.name === 'Österreich', 'reset button returns the selection to all of Austria', reset.name)
+check(/"code"\],""\]/.test(reset.filter), 'reset button clears the selection outline', reset.filter)
+
+// Everything below reads a Bundesland selection, so put one back.
+await clickRegion(page, [13.9, 48.1], 'Bundesland reselect')
+
 // Citizenship breakdown: three annual classes, fixed colour order.
 await page.locator('input[type="checkbox"]').first().check()
 await page.waitForTimeout(1200)
@@ -91,7 +110,7 @@ const annualTraces = await page.evaluate(() => {
 check(annualTraces.length === 3, 'annual breakdown has 3 traces', `${annualTraces.length}`)
 check(annualTraces[0]?.color === '#2a78d6', 'series colours follow fixed slot order', annualTraces[0]?.color)
 
-// Quarterly is lazily fetched; it used to render empty because of a race.
+// Quarterly is lazily fetched, so an unawaited payload renders an empty plot.
 await page.getByRole('button', { name: 'Quartalsweise' }).click()
 await page.waitForTimeout(2200)
 const q = await page.evaluate(() => {
@@ -156,8 +175,8 @@ check(stacked.below, 'year table sits below the map and chart')
 check(stacked.mapHeight < 520, 'map is not stretched to full page height', `${stacked.mapHeight}px`)
 
 // Every figure is a stock on one reference date, so the page must say which day.
-const reference = await page.evaluate(() => {
-  const captions = [...document.querySelectorAll('.text-caption')].map((e) => e.textContent.trim())
+const reference = await page.evaluate((CAPTION) => {
+  const captions = [...document.querySelectorAll(CAPTION)].map((e) => e.textContent.trim())
   const gd = document.querySelector('.js-plotly-plot')
   return {
     chartNote: captions.find((t) => /Stichtag|Reference date/.test(t)) ?? '',
@@ -166,7 +185,7 @@ const reference = await page.evaluate(() => {
     firstX: gd?.data?.[0]?.x?.[0] ?? '',
     lastX: gd?.data?.[0]?.x?.at(-1) ?? '',
   }
-})
+}, CAPTION)
 check(/1\. Jänner|1 January/.test(reference.chartNote), 'chart states the annual reference date',
   reference.chartNote)
 check(/2026/.test(reference.headline) && /Jän|Jan/.test(reference.headline),
@@ -190,8 +209,8 @@ check(/\d\s\d{3}|\d{3}\s\d{3}/.test(hover[1] ?? ''), 'hover figures use the same
 await page.mouse.move(5, 5)
 await page.waitForTimeout(400)
 
-// Annual ticks were auto-thinned by Plotly before; they are now explicit, so
-// they need the same overlap guard as the quarterly axis.
+// Annual ticks are placed explicitly rather than auto-thinned by Plotly, so they
+// need the same overlap guard as the quarterly axis.
 const annualTicks = await page.evaluate(() => {
   const t = [...document.querySelectorAll('.js-plotly-plot .xtick text')]
     .map((e) => e.getBoundingClientRect())
@@ -221,23 +240,25 @@ check(ticks.overlaps === 0, 'quarterly tick labels do not overlap',
   `${ticks.overlaps} overlapping of ${ticks.count}: ${ticks.labels.join(',')}`)
 
 // Quarterly is the tallest the chart card gets (its note wraps to two lines), so
-// it is the case that used to overflow the row and be clipped by the table card.
-const clipping = await page.evaluate(() => {
+// it is the case most likely to overflow the row and be clipped by the table card.
+const clipping = await page.evaluate((CAPTION) => {
   const card = document.querySelector('.chart-card').getBoundingClientRect()
   const plot = document.querySelector('.js-plotly-plot').getBoundingClientRect()
   const mapCard = document.querySelector('.map-card').getBoundingClientRect()
   const canvas = document.querySelector('.map-canvas').getBoundingClientRect()
   const table = document.querySelector('.detail-table').closest('.v-card').getBoundingClientRect()
-  const note = [...document.querySelectorAll('.chart-card .text-caption')].at(-1)?.getBoundingClientRect()
+  const note = [...document.querySelectorAll(`.chart-card ${CAPTION}`)].at(-1)?.getBoundingClientRect()
   return {
     plotOver: Math.round(plot.bottom - card.bottom),
-    noteOver: note ? Math.round(note.bottom - card.bottom) : 0,
+    noteOver: note ? Math.round(note.bottom - card.bottom) : null,
     mapOver: Math.round(canvas.bottom - mapCard.bottom),
     tableOverlap: Math.round(Math.max(card.bottom, mapCard.bottom) - table.top),
   }
-})
+}, CAPTION)
 check(clipping.plotOver <= 0, 'chart plot not clipped by its card', `${clipping.plotOver}px over`)
-check(clipping.noteOver <= 0, 'chart note not clipped by its card', `${clipping.noteOver}px over`)
+// `null` means the note was not found at all, which must fail rather than read as 0px over.
+check(clipping.noteOver !== null && clipping.noteOver <= 0, 'chart note not clipped by its card',
+  clipping.noteOver === null ? 'note not found' : `${clipping.noteOver}px over`)
 check(clipping.mapOver <= 1, 'map canvas not clipped by its card', `${clipping.mapOver}px over`)
 check(clipping.tableOverlap <= 0, 'table card does not cover the row above',
   `${clipping.tableOverlap}px overlap`)
@@ -262,15 +283,15 @@ const clipped = await page.evaluate(() =>
 check(clipped.length === 0, 'no select label is truncated', JSON.stringify(clipped))
 
 // The hint belongs with the map it describes.
-const hint = await page.evaluate(() => {
+const hint = await page.evaluate((CAPTION) => {
   const map = document.querySelector('.map-card').getBoundingClientRect()
-  const el = [...document.querySelectorAll('.text-caption')].find((e) =>
+  const el = [...document.querySelectorAll(CAPTION)].find((e) =>
     /anklicken|Click a region/.test(e.textContent),
   )
   if (!el) return null
   const b = el.getBoundingClientRect()
   return { gap: Math.round(b.top - map.bottom), aligned: Math.abs(b.left - map.left) < 6 }
-})
+}, CAPTION)
 check(hint !== null && hint.gap >= 0 && hint.gap < 40 && hint.aligned,
   'hint sits directly below the map', JSON.stringify(hint))
 
@@ -329,9 +350,30 @@ await page.goto(BASE + '#/list', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(2500)
 check((await page.locator('tbody tr').count()) > 0, 'list renders rows')
 
-// Jumping from a Gemeinde in the list to the map used to break the map outright:
-// it asked for municipality geometry that does not exist, so nothing rendered and
-// clicks stopped working.
+// The table has to be operable by keyboard, not only by pointer. Each row carries
+// one button named after its region, so a focused row opens on Enter.
+const rowButton = page.locator('.row-open').first()
+const rowName = (await rowButton.textContent())?.trim()
+const rowLabel = await rowButton.getAttribute('aria-label')
+check(!!rowName && !!rowLabel && rowLabel.includes(rowName),
+  'row button is named after its region', `${rowLabel} vs ${rowName}`)
+
+await rowButton.focus()
+await page.keyboard.press('Enter')
+await page.waitForTimeout(3000)
+const viaKeyboard = await page.evaluate(() => ({
+  hash: location.hash,
+  region: document.querySelector('.region-name')?.textContent?.trim(),
+}))
+check(viaKeyboard.hash === '#/' && viaKeyboard.region === rowName,
+  'Enter on a row opens that region', JSON.stringify(viaKeyboard))
+
+await page.goto(BASE + '#/list', { waitUntil: 'domcontentloaded' })
+await page.waitForTimeout(2500)
+
+// A Gemeinde has no polygon of its own. If the handoff pointed the map at
+// municipality level, the geometry fetch would 404, nothing would render and
+// clicks would stop working.
 await page.locator('.v-select').first().click()
 await page.waitForTimeout(600)
 await page.getByRole('option', { name: 'Gemeinden' }).click()
