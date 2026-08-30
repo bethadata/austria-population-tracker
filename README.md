@@ -151,7 +151,7 @@ austria-population-tracker/
 
 Two sibling dashboards, same stack and same conventions:
 
-- [Austria Transition Tracker](https://bethadata.github.io/austria-transition-tracker-v2/) — energy transition and emissions
+- [Austria Transition Tracker](https://bethadata.github.io/austria-transition-tracker/) — energy transition and emissions
 - [Austria Power Simulator](https://bethadata.github.io/austria-power-sim/) — hourly electricity balance
 
 ## Licence
