@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write
+  # For the explicit deploy dispatch in the last step, not for the data commit.
+  actions: write
 
 jobs:
   refresh:
@@ -26,14 +28,28 @@ jobs:
         # The pipeline is stdlib-only, so there is nothing to install.
 
       - name: Commit if the data changed
+        id: commit
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -z "$(git status --porcelain -- public/data)" ]; then
             echo "No data changes."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           VINTAGE=$(python -c "import json;print(json.load(open('public/data/manifest.json'))['source_vintage'])")
           git add -- public/data
           git commit -m "data: refresh from Statistik Austria ($VINTAGE)"
           git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # A push made with GITHUB_TOKEN does not start another workflow run, so
+      # deploy.yml never sees this commit and the live site keeps serving the
+      # previous build with green checkmarks everywhere. workflow_dispatch is
+      # one of the two documented exceptions to that rule, so ask for the
+      # deploy by name instead of relying on the push trigger.
+      - name: Deploy the refreshed data
+        if: steps.commit.outputs.pushed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
